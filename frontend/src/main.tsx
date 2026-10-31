@@ -40,11 +40,10 @@ class RootErrorBoundary extends Component<
               color: '#fca5a5',
             }}
           >
-            {this.state.error.message}\n{this.state.error.stack}
+            {this.state.error.message}
+            {'\n'}
+            {this.state.error.stack}
           </pre>
-          <p style={{ marginTop: 16, color: '#94a3b8', fontSize: 13 }}>
-            Open DevTools → Console for details. Try hard refresh (Ctrl+Shift+R).
-          </p>
         </div>
       )
     }
@@ -53,9 +52,7 @@ class RootErrorBoundary extends Component<
 }
 
 const root = document.getElementById('root')
-if (!root) {
-  throw new Error('Missing #root element in index.html')
-}
+if (!root) throw new Error('Missing #root')
 
 createRoot(root).render(
   <StrictMode>
