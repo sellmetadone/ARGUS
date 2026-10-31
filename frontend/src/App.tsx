@@ -82,7 +82,11 @@ export default function App() {
   }, [appearance]);
 
   const bg =
-    appearance.theme === 'amoled' ? '#000000' : appearance.theme === 'light' ? '#f8fafc' : (appearance.graphBg || '#020617');
+    appearance.theme === 'amoled'
+      ? '#000000'
+      : appearance.theme === 'light'
+        ? '#f8fafc'
+        : appearance.graphBg || '#020617';
   const headerBg = appearance.theme === 'light' ? '#ffffff' : '#0f172a';
   const textMain = appearance.theme === 'light' ? '#0f172a' : '#e2e8f0';
 
@@ -114,20 +118,26 @@ export default function App() {
           flexShrink: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img
-            src="/argus_logo.png"
+            src="/argus_logo.svg"
             alt="Argus"
-            style={{ height: 32, width: 'auto', objectFit: 'contain' }}
+            width={28}
+            height={28}
+            style={{ borderRadius: 6, display: 'block' }}
             onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
+              const el = e.target as HTMLImageElement;
+              if (!el.dataset.fallback) {
+                el.dataset.fallback = '1';
+                el.src = '/favicon.svg';
+              }
             }}
           />
-          <span style={{ fontWeight: 700, fontSize: 16, letterSpacing: 2, color: textMain }}>ARGUS</span>
+          <span style={{ fontWeight: 700, fontSize: 15, letterSpacing: 2.5, color: textMain }}>ARGUS</span>
           {activeCase && (
             <span
               style={{
-                marginLeft: 8,
+                marginLeft: 4,
                 fontSize: 12,
                 color: '#94a3b8',
                 background: appearance.theme === 'light' ? '#e2e8f0' : '#1e293b',
@@ -183,6 +193,7 @@ export default function App() {
           <ToolbarBtn active={panels.maltego} onClick={() => togglePanel('maltego')} icon={<Workflow size={15} />} label="Maltego" />
           <ToolbarBtn active={panels.settings} onClick={() => togglePanel('settings')} icon={<Settings size={15} />} label={t('settings')} />
           <button
+            type="button"
             onClick={() => setShowWelcome(true)}
             style={{
               marginLeft: 4,
@@ -199,6 +210,7 @@ export default function App() {
             Home
           </button>
           <button
+            type="button"
             onClick={() => setCommandPaletteOpen(true)}
             style={{
               marginLeft: 4,
@@ -237,8 +249,8 @@ export default function App() {
                 }}
               >
                 <div style={{ textAlign: 'center', color: '#64748b' }}>
-                  <Map size={48} style={{ marginBottom: 12, opacity: 0.5 }} />
-                  <div style={{ fontSize: 14 }}>Geospatial Map View</div>
+                  <Map size={40} style={{ marginBottom: 12, opacity: 0.5 }} />
+                  <div style={{ fontSize: 14 }}>Geospatial map</div>
                   <div style={{ fontSize: 12, marginTop: 4 }}>Leaflet / MapLibre — planned</div>
                 </div>
               </div>
@@ -298,17 +310,18 @@ function ToolbarBtn({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       title={title || label}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 6,
-        padding: label ? '6px 12px' : '6px 8px',
-        background: active ? '#1e1b4b' : 'transparent',
-        border: `1px solid ${active ? '#4c1d95' : '#334155'}`,
+        padding: label ? '6px 11px' : '6px 8px',
+        background: active ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+        border: `1px solid ${active ? '#6366f1' : '#334155'}`,
         borderRadius: 6,
-        color: active ? '#c4b5fd' : '#94a3b8',
+        color: active ? '#c7d2fe' : '#94a3b8',
         cursor: 'pointer',
         fontSize: 12,
         fontWeight: 500,

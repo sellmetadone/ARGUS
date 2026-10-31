@@ -20,7 +20,7 @@ export default function Sidebar() {
   const collapsed = !panels.sidebar;
 
   const handleNewCase = () => {
-    const name = window.prompt('Название кейса / графа:', `Investigation #${String(cases.length + 1).padStart(3, '0')}`);
+    const name = window.prompt('Case name:', `Investigation #${String(cases.length + 1).padStart(3, '0')}`);
     if (name === null) return;
     const id = `case-${Date.now()}`;
     addCase({
@@ -35,20 +35,20 @@ export default function Sidebar() {
 
   const handleDeleteCase = (id: string, name: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm(`Удалить кейс «${name}» и весь его граф?`)) return;
+    if (!window.confirm(`Delete case "${name}" and its graph?`)) return;
     removeCase(id);
   };
 
   const handleRename = (id: string, oldName: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const name = window.prompt('Новое имя кейса:', oldName);
+    const name = window.prompt('Rename case:', oldName);
     if (name === null || !name.trim()) return;
     renameCase(id, name.trim());
   };
 
   const handleClear = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm('Очистить граф этого кейса (все узлы и связи)?')) return;
+    if (!window.confirm('Clear all nodes and edges in this case?')) return;
     clearCaseData(id);
   };
 
@@ -66,16 +66,16 @@ export default function Sidebar() {
           gap: 8,
         }}
       >
-        <button onClick={() => togglePanel('sidebar')} style={iconBtn}>
+        <button type="button" onClick={() => togglePanel('sidebar')} style={iconBtn}>
           <ChevronRight size={18} />
         </button>
-        <button onClick={() => togglePanel('search')} style={iconBtn} title="Search">
+        <button type="button" onClick={() => togglePanel('search')} style={iconBtn} title="Search">
           <SearchIcon size={16} />
         </button>
-        <button onClick={() => togglePanel('settings')} style={iconBtn} title="Settings">
+        <button type="button" onClick={() => togglePanel('settings')} style={iconBtn} title="Settings">
           <Settings size={16} />
         </button>
-        <button onClick={handleNewCase} style={iconBtn} title="New case">
+        <button type="button" onClick={handleNewCase} style={iconBtn} title="New case">
           <Plus size={16} />
         </button>
       </div>
@@ -104,9 +104,12 @@ export default function Sidebar() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <FolderOpen size={18} color={appearance.accentColor} />
-          <span style={{ fontWeight: 600, fontSize: 14, color: '#e2e8f0' }}>{t('cases').toUpperCase()}</span>
+          <span style={{ fontWeight: 600, fontSize: 13, color: '#e2e8f0', letterSpacing: 0.5 }}>
+            {t('cases').toUpperCase()}
+          </span>
         </div>
         <button
+          type="button"
           onClick={() => togglePanel('sidebar')}
           style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: 4 }}
         >
@@ -116,9 +119,7 @@ export default function Sidebar() {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
         {cases.length === 0 && (
-          <div style={{ padding: 16, fontSize: 12, color: '#64748b' }}>
-            Нет кейсов. Создайте новый граф.
-          </div>
+          <div style={{ padding: 16, fontSize: 12, color: '#64748b' }}>No cases yet. Create one below.</div>
         )}
         {cases.map((c) => (
           <div
@@ -126,8 +127,9 @@ export default function Sidebar() {
             onClick={() => setActiveCase(c.id)}
             style={{
               padding: '10px 12px',
-              background: activeCaseId === c.id ? '#1e1b4b' : 'transparent',
-              borderLeft: activeCaseId === c.id ? `3px solid ${appearance.accentColor}` : '3px solid transparent',
+              background: activeCaseId === c.id ? 'rgba(99, 102, 241, 0.12)' : 'transparent',
+              borderLeft:
+                activeCaseId === c.id ? `3px solid ${appearance.accentColor}` : '3px solid transparent',
               cursor: 'pointer',
               color: activeCaseId === c.id ? '#e2e8f0' : '#94a3b8',
             }}
@@ -135,10 +137,10 @@ export default function Sidebar() {
             <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>{c.name}</div>
             <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>
               {c.status === 'open'
-                ? '● ' + t('status_open')
+                ? t('status_open')
                 : c.status === 'closed'
-                  ? '○ ' + t('status_closed')
-                  : '◌ ' + t('status_archived')}
+                  ? t('status_closed')
+                  : t('status_archived')}
             </div>
             <div style={{ display: 'flex', gap: 4 }} onClick={(e) => e.stopPropagation()}>
               <MiniBtn title="Rename" onClick={(e) => handleRename(c.id, c.name, e)}>
@@ -155,22 +157,23 @@ export default function Sidebar() {
         ))}
       </div>
 
-      <div style={{ padding: 8, borderTop: '1px solid #1e293b', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ padding: 8, borderTop: '1px solid #1e293b', display: 'flex', flexDirection: 'column', gap: 4 }}>
         <NavBtn icon={<SearchIcon size={14} />} label={t('search')} onClick={() => togglePanel('search')} />
-        <NavBtn icon={<Network size={14} />} label="Entities" onClick={() => togglePanel('search')} />
+        <NavBtn icon={<Network size={14} />} label="Graph" onClick={() => setActiveCase(activeCaseId)} />
         <NavBtn icon={<Settings size={14} />} label={t('settings')} onClick={() => togglePanel('settings')} />
       </div>
 
       <div style={{ padding: 12, borderTop: '1px solid #1e293b' }}>
         <button
+          type="button"
           onClick={handleNewCase}
           style={{
             width: '100%',
             padding: '10px 12px',
-            background: '#1e1b4b',
-            border: '1px solid #4c1d95',
+            background: 'rgba(99, 102, 241, 0.15)',
+            border: '1px solid #4f46e5',
             borderRadius: 6,
-            color: '#c4b5fd',
+            color: '#c7d2fe',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -181,7 +184,7 @@ export default function Sidebar() {
           }}
         >
           <Plus size={16} />
-          {t('new_case')} / New graph
+          {t('new_case')}
         </button>
       </div>
     </div>
@@ -201,11 +204,12 @@ function MiniBtn({
 }) {
   return (
     <button
+      type="button"
       title={title}
       onClick={onClick}
       style={{
         padding: '3px 6px',
-        background: danger ? '#3f1d1d' : '#1e293b',
+        background: danger ? 'rgba(127, 29, 29, 0.4)' : '#1e293b',
         border: `1px solid ${danger ? '#7f1d1d' : '#334155'}`,
         borderRadius: 4,
         color: danger ? '#fca5a5' : '#94a3b8',
@@ -222,6 +226,7 @@ function MiniBtn({
 function NavBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       style={{
         display: 'flex',
