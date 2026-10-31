@@ -5,6 +5,7 @@ import { caseRepository } from '../core/storage/caseRepository';
 
 export type ThemeMode = 'dark' | 'light' | 'amoled';
 export type WorkspaceLayout = 'osint' | 'infrastructure' | 'forensics' | 'geosint' | 'custom';
+export type CanvasTool = 'select' | 'hand' | 'node' | 'connect' | 'note' | 'text';
 
 export interface AppearanceSettings {
   accentColor: string;
@@ -36,6 +37,8 @@ export interface GraphSettings {
   backgroundVariant: 'dots' | 'lines' | 'cross' | 'none';
   focusMode: boolean;
   layoutPreset: 'force' | 'radial' | 'grid' | 'hierarchy';
+  snapToGrid: boolean;
+  gridSize: number;
 }
 
 export interface PanelVisibility {
@@ -110,6 +113,8 @@ interface AppState {
   setCommandPaletteOpen: (open: boolean) => void;
   showWelcome: boolean;
   setShowWelcome: (v: boolean) => void;
+  canvasTool: CanvasTool;
+  setCanvasTool: (t: CanvasTool) => void;
   shodanApiKey: string;
   setShodanApiKey: (k: string) => void;
   webSearchQuery: string;
@@ -135,18 +140,18 @@ const ALL_TYPES: EntityType[] = [
 ];
 
 const defaultAppearance: AppearanceSettings = {
-  accentColor: '#8b5cf6',
-  theme: 'dark',
-  preset: 'Argus Dark',
+  accentColor: '#526C8C',
+  theme: 'light',
+  preset: 'Argus Light',
   uiScale: 1,
   fontFamily: 'Inter, system-ui, sans-serif',
-  borderRadius: 8,
-  transparency: 0.95,
+  borderRadius: 6,
+  transparency: 1,
   animations: true,
-  language: 'en',
-  graphBg: '#020617',
-  graphDots: '#1e293b',
-  edgeColor: '#64748b',
+  language: 'ru',
+  graphBg: '#FCFCFB',
+  graphDots: '#E7E8E5',
+  edgeColor: '#94a3b8',
   wallpaper: 'dots',
   wallpaperUrl: '',
   entityColors: {},
@@ -164,6 +169,8 @@ const defaultGraphSettings: GraphSettings = {
   backgroundVariant: 'dots',
   focusMode: true,
   layoutPreset: 'force',
+  snapToGrid: false,
+  gridSize: 20,
 };
 
 function persistActiveCase(get: () => AppState) {
@@ -386,6 +393,8 @@ export const useStore = create<AppState>((set, get) => ({
   setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
   showWelcome: true,
   setShowWelcome: (v) => set({ showWelcome: v }),
+  canvasTool: 'select',
+  setCanvasTool: (t) => set({ canvasTool: t }),
   shodanApiKey: typeof localStorage !== 'undefined' ? localStorage.getItem('argus_shodan_key') || '' : '',
   setShodanApiKey: (k) => {
     try { localStorage.setItem('argus_shodan_key', k); } catch {}
