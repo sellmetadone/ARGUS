@@ -1,30 +1,55 @@
 #!/usr/bin/env node
 /**
  * Argus CLI — launcher (browser + console search)
+ * Author: sellmetadone · https://t.me/sofia_white_death · https://t.me/argus_platform
  */
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CONFIG_PATH = join(__dirname, 'argus.config.json');
 
 function loadConfig() {
   try {
-    return JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
+    if (existsSync(CONFIG_PATH)) {
+      return JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
+    }
   } catch {
-    return { port: 3030, host: '127.0.0.1', openBrowser: true, lang: 'ru', fallbackHost: '127.0.0.1' };
+    /* defaults */
   }
+  return {
+    port: 3030,
+    host: 'argus.local',
+    openBrowser: true,
+    lang: 'ru',
+    fallbackHost: '127.0.0.1',
+  };
 }
 
 const cfg = loadConfig();
 const PORT = cfg.port || 3030;
 const HOST = cfg.fallbackHost || '127.0.0.1';
 
+function banner() {
+  console.log(`
+  ╔══════════════════════════════════════════╗
+  ║              A R G U S                    ║
+  ║     Cyber Investigation Graph             ║
+  ╠══════════════════════════════════════════╣
+  ║  sellmetadone                             ║
+  ║  @sofia_white_death                       ║
+  ║  t.me/argus_platform                      ║
+  ╚══════════════════════════════════════════╝
+`);
+}
+
 async function startWeb() {
-  console.log(`\n  ARGUS Web UI → http://${HOST}:${PORT}\n`);
+  console.log(`\n  Starting Vite…`);
+  console.log(`  Prefer:  http://${HOST}:${PORT}/`);
+  console.log(`  If the port is busy, Vite will print another Local: URL — use that one.\n`);
   const child = spawn('npx', ['vite', '--host', '0.0.0.0', '--port', String(PORT)], {
     cwd: __dirname,
     stdio: 'inherit',
@@ -67,16 +92,10 @@ async function consoleSearch() {
 }
 
 async function menu() {
-  console.log(`
-  ╔══════════════════════════════════════╗
-  ║           A R G U S                  ║
-  ║   Cyber Investigation Graph          ║
-  ╚══════════════════════════════════════╝
-
-  1. Browser Argus   — open web UI
-  2. Console         — terminal search
-  0. Exit
-`);
+  banner();
+  console.log(`  1. Browser Argus   — open web UI`);
+  console.log(`  2. Console         — terminal search`);
+  console.log(`  0. Exit\n`);
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const ask = (q) => new Promise((r) => rl.question(q, r));
   const choice = (await ask('Select [1/2/0]: ')).trim();
