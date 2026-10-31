@@ -47,6 +47,10 @@ export interface PanelVisibility {
   settings: boolean;
   maltego: boolean;
   tutorial: boolean;
+  analytics: boolean;
+  evidence: boolean;
+  correlation: boolean;
+  ai: boolean;
 }
 
 interface HistoryEntry {
@@ -65,7 +69,6 @@ interface AppState {
   removeCase: (id: string) => void;
   renameCase: (id: string, name: string) => void;
   clearCaseData: (caseId: string) => void;
-
   entities: Entity[];
   relationships: Relationship[];
   selectedEntityId: string | null;
@@ -79,7 +82,6 @@ interface AppState {
   addRelationship: (r: Relationship) => void;
   pinnedNodeIds: string[];
   togglePinNode: (id: string) => void;
-
   typeFilters: EntityType[];
   setTypeFilters: (types: EntityType[]) => void;
   graphSearchQuery: string;
@@ -87,17 +89,14 @@ interface AppState {
   highlightedPath: string[];
   setHighlightedPath: (path: string[]) => void;
   expandNode: (id: string) => void;
-
   timeline: TimelineEvent[];
   selectedTimelineEventId: string | null;
   setSelectedTimelineEvent: (id: string | null) => void;
-
   history: HistoryEntry[];
   historyIndex: number;
   pushHistory: (label: string) => void;
   undo: () => void;
   redo: () => void;
-
   appearance: AppearanceSettings;
   setAppearance: (partial: Partial<AppearanceSettings>) => void;
   graphSettings: GraphSettings;
@@ -107,7 +106,6 @@ interface AppState {
   panels: PanelVisibility;
   setPanel: (key: keyof PanelVisibility, value: boolean) => void;
   togglePanel: (key: keyof PanelVisibility) => void;
-
   commandPaletteOpen: boolean;
   setCommandPaletteOpen: (open: boolean) => void;
   showWelcome: boolean;
@@ -118,7 +116,6 @@ interface AppState {
   setWebSearchQuery: (q: string) => void;
   webSearchHistory: string[];
   addWebSearchHistory: (q: string) => void;
-
   getEntitiesForCase: (caseId: string) => Entity[];
   getRelationshipsForCase: (caseId: string) => Relationship[];
   getTimelineForCase: (caseId: string) => TimelineEvent[];
@@ -377,6 +374,10 @@ export const useStore = create<AppState>((set, get) => ({
     settings: false,
     maltego: false,
     tutorial: false,
+    analytics: false,
+    evidence: false,
+    correlation: false,
+    ai: false,
   },
   setPanel: (key, value) => set((s) => ({ panels: { ...s.panels, [key]: value } })),
   togglePanel: (key) => set((s) => ({ panels: { ...s.panels, [key]: !s.panels[key] } })),
@@ -438,11 +439,7 @@ export const useStore = create<AppState>((set, get) => ({
         ...ents.map((e) => `${e.id},${e.type},"${e.label.replace(/"/g, '""')}"`)];
       return rows.join('\n');
     }
-    // graphml stub
-    return `<?xml version="1.0" encoding="UTF-8"?><graphml><graph>
-${ents.map((e) => `  <node id="${e.id}"><data key="label">${e.label}</data></node>`).join('\n')}
-${rels.map((r) => `  <edge source="${r.sourceId}" target="${r.targetId}"/>`).join('\n')}
-</graph></graphml>`;
+    return `<?xml version="1.0" encoding="UTF-8"?><graphml><graph>\n${ents.map((e) => `  <node id="${e.id}"><data key="label">${e.label}</data></node>`).join('\n')}\n${rels.map((r) => `  <edge source="${r.sourceId}" target="${r.targetId}"/>`).join('\n')}\n</graph></graphml>`;
   },
   importGraph: (json) => {
     try {
