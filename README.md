@@ -1,23 +1,23 @@
 # ARGUS
 
-Interactive investigation graph for cyber / OSINT analysis.
+Interactive investigation graph for cyber and OSINT analysis.
 
-Argus links infrastructure and identity entities (domains, IPs, certificates, people, emails, phones, and related types) on a visual graph, with optional timeline, local case storage, OSINT lookup helpers, and a terminal search shell.
+Argus links infrastructure and identity entities on a visual graph: domains, IPs, certificates, people, emails, phones, organizations, and related types. Cases are stored locally in the browser. A terminal shell supports search workflows alongside the web UI.
 
-This repository is the application source. It is not a marketing site.
+This repository contains the application source only.
 
 ## Features
 
-- **Investigation graph** — nodes and edges on React Flow; multi-side connection handles; edge styles (smoothstep, bezier, straight, step) and variants (solid, dashed, animated, thick)
-- **Cases** — create, rename, clear, delete investigation cases
-- **Entities & relationships** — typed model with confidence and source metadata
+- **Investigation graph** — React Flow canvas with multi-side connection handles, edge styles (smoothstep, bezier, straight, step) and variants (solid, dashed, animated, thick)
+- **Cases** — create, rename, clear, and delete investigation cases
+- **Entities and relationships** — typed model with confidence and source metadata
 - **Undo / redo** — snapshot history for structural graph changes and node moves
-- **Search panel** — manual entity add, DNS lookup via Cloudflare DoH, external OSINT tool links (WHOIS, crt.sh, Shodan pages, etc.)
+- **Search panel** — manual entity add, DNS lookup via Cloudflare DoH, links to external OSINT tools (WHOIS, crt.sh, Shodan pages, and others)
 - **Email / phone validation** — format checks, disposable-domain hints, optional MX lookup
-- **Maltego-oriented export** — GraphML / CSV oriented for interchange; local transform stubs
+- **Maltego-oriented export** — GraphML and CSV interchange helpers; local transform stubs
 - **Settings** — theme, language (15 locales), graph colors, wallpaper, focus mode, layout presets
-- **CLI** — `npm run argus`: browser mode, console search, language selection; optional rainbow banner
-- **Local persistence** — case snapshots in `localStorage` via `caseRepository`
+- **CLI** — `npm run argus`: open browser, console search, or language selection
+- **Local persistence** — case snapshots in `localStorage` through `caseRepository`
 
 ## Stack
 
@@ -34,7 +34,7 @@ frontend/          Web UI + CLI
   src/
     components/    UI panels and graph
     core/          event bus, module registry, case storage
-    services/      OSINT, validation, Maltego helpers
+    services/      OSINT helpers, validation, Maltego helpers
     store/         Zustand application state
     types/         Entity and relationship types
   argus-cli.mjs    Terminal launcher / search shell
@@ -54,83 +54,74 @@ cd frontend
 npm install
 ```
 
-## Run (web)
+## Run
+
+Web UI (default host `0.0.0.0`, port `3030`):
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-Open:
+Then open `http://127.0.0.1:3030` (or `http://argus.local:3030` if you map the host in `/etc/hosts`).
 
-- http://127.0.0.1:3030/
-- or http://argus.local:3030/ if `127.0.0.1 argus.local` is in your hosts file
-
-## Run (CLI)
+CLI menu:
 
 ```bash
 cd frontend
 npm run argus
 ```
 
-Menu:
-
-1. Browser Argus — starts Vite and opens the UI when the port is ready
-2. Console — search domain / IP / email / phone in the terminal
-3. Language
-
-One-shot search:
-
-```bash
-npm run argus -- search example.com
-```
-
-Windows: `START_ARGUS.bat` in the project root runs the same CLI entry.
-
-## Build
+Run both (dev server in background + CLI):
 
 ```bash
 cd frontend
-npm run build
-npm run preview
+npm run both
 ```
 
-Optional typecheck (requires a complete `npm install`):
-
-```bash
-npm run typecheck
-```
+Windows helper: `START_ARGUS.bat` in the repository root.
 
 ## Configuration
 
-`frontend/argus.config.json` (CLI):
+`frontend/argus.config.json`:
 
 | Key | Meaning |
 |-----|---------|
 | `port` | Dev server port (default 3030) |
-| `host` | Preferred hostname label (e.g. `argus.local`) |
-| `fallbackHost` | Browser open target (default `127.0.0.1`) |
-| `lang` | CLI language code |
-| `shodanApiKey` | Optional; do not commit real keys |
-| `rainbow` | ASCII banner animation |
+| `host` | Preferred hostname label |
+| `fallbackHost` | Bind / open fallback (`127.0.0.1`) |
+| `lang` | Default UI language code |
+| `theme` | Default theme id |
 
-Do not commit real API keys.
+Vite config binds `0.0.0.0:3030`. Optional Shodan API key is entered in Settings and stored only in browser `localStorage` (`argus_shodan_key`). Do not commit real API keys.
 
-## Security notes
+## Development
 
-- No backend is required for the core UI; DNS/OSINT calls from the browser are limited by CORS and public endpoints.
-- Case data in `localStorage` stays on the machine.
-- Import only JSON you trust.
+```bash
+cd frontend
+npm run typecheck
+npm run build
+npm run preview
+```
 
-## Status
+## Architecture notes
 
-Application source is usable for local investigation workflows (graph, cases, search helpers, CLI). Module registry and case repository exist as integration layers and are partially wired.
+- **UI** lives under `components/`; graph rendering is isolated in `GraphCanvas` + `EntityNode`.
+- **State** is centralized in Zustand (`store/useStore.ts`) with explicit history snapshots for undo/redo.
+- **Persistence** goes through `core/storage/caseRepository.ts` (localStorage index + per-case documents).
+- **Modules** are registered via `core/moduleRegistry.ts` (scaffold for future panel/command plugins).
+- **OSINT** providers are link catalogs and lightweight client helpers in `services/`; no backend secrets are required for core operation.
 
-Known limitations:
+## Current status
 
-- Live multi-provider OSINT is not a full substitute for dedicated commercial platforms.
-- 3D graph mode is experimental.
-- Full automated test suite is not included in this tree.
+Application source is usable for local investigation graphs, case management, export helpers, and the CLI shell. Some OSINT integrations are catalog links or optional client-side lookups rather than full automated pipelines. Module registry wiring is intentional and gradual.
+
+## Known limitations
+
+- No server-side multi-user collaboration
+- 3D graph mode is optional and lightweight
+- Full CLI equivalents of tools such as theHarvester or Amass are not bundled; the catalog points to external tools
+- Case data stays in the browser; clear site data removes it
 
 ## License
 
