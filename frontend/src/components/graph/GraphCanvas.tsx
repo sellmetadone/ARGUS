@@ -20,7 +20,10 @@ import EntityNode from './EntityNode';
 import { useStore } from '../../store/useStore';
 import { RELATIONSHIP_LABELS, ENTITY_COLORS, type EntityType } from '../../types';
 
-const nodeTypes = { entity: EntityNode };
+/** Stable reference — must not be recreated each render (React Flow requirement) */
+const nodeTypes = { entity: EntityNode } as const;
+
+const VALID_EDGE_TYPES = new Set(['default', 'straight', 'step', 'smoothstep', 'bezier', 'simplebezier']);
 
 export default function GraphCanvas() {
   const {
@@ -46,11 +49,12 @@ export default function GraphCanvas() {
 
   const filteredEntities = useMemo(() => {
     let list = entities;
-    if (typeFilters.length) list = list.filter((e) => typeFilters.includes(e.type));
-    if (graphSearchQuery.trim()) {
+    if (typeFilters?.length) list = list.filter((e) => typeFilters.includes(e.type));
+    if (graphSearchQuery?.trim()) {
       const q = graphSearchQuery.toLowerCase();
       list = list.filter(
-        (e) => e.label.toLowerCase().includes(q) || e.type.toLowerCase().includes(q)
+        (e) =>
+          (e.label || '').toLowerCase().includes(q) || (e.type || '').toLowerCase().includes(q)
       );
     }
     return list;
@@ -59,40 +63,47 @@ export default function GraphCanvas() {
   const filteredIds = useMemo(() => new Set(filteredEntities.map((e) => e.id)), [filteredEntities]);
 
   const buildNodes = useCallback((): Node[] => {
-    return filteredEntities.map((e) => ({
-      id: e.id,
+    return filteredEntities.map((e, i) => ({
+      id: String(e.id),
       type: 'entity',
-      position: e.position || { x: 100, y: 100 },
+      position: {
+        x: typeof e.position?.x === 'number' ? e.position.x : 120 + (i % 5) * 160,
+        y: typeof e.position?.y === 'number' ? e.position.y : 120 + Math.floor(i / 5) * 100,
+      },
       data: {
-        label: e.label,
+        label: e.label || e.id,
         entityType: e.type,
         selected: e.id === selectedEntityId,
-        highlighted: highlightedPath.includes(e.id) || e.id === selectedEntityId,
-        pinned: pinnedNodeIds.includes(e.id),
+        highlighted: (highlightedPath || []).includes(e.id) || e.id === selectedEntityId,
+        pinned: (pinnedNodeIds || []).includes(e.id),
       },
-      draggable: !pinnedNodeIds.includes(e.id),
+      draggable: !(pinnedNodeIds || []).includes(e.id),
     }));
   }, [filteredEntities, selectedEntityId, highlightedPath, pinnedNodeIds]);
 
+  const edgeType = useMemo(() => {
+    const t = graphSettings.edgeStyle || 'smoothstep';
+    return VALID_EDGE_TYPES.has(t) ? t : 'smoothstep';
+  }, [graphSettings.edgeStyle]);
+
   const buildEdges = useCallback((): Edge[] => {
-    const accent = appearance.accentColor;
+    const accent = appearance.accentColor || '#8b5cf6';
     const stroke = appearance.edgeColor || '#64748b';
     const variant = graphSettings.edgeVariant || 'solid';
     const baseWidth = graphSettings.edgeThickness || 1.5;
+    const path = highlightedPath || [];
 
     return relationships
       .filter((r) => filteredIds.has(r.sourceId) && filteredIds.has(r.targetId))
       .map((r) => {
-        const inPath =
-          highlightedPath.includes(r.sourceId) && highlightedPath.includes(r.targetId);
-        const width =
-          variant === 'thick' ? baseWidth + 2 : inPath ? baseWidth + 1 : baseWidth;
+        const inPath = path.includes(r.sourceId) && path.includes(r.targetId);
+        const width = variant === 'thick' ? baseWidth + 2 : inPath ? baseWidth + 1 : baseWidth;
         return {
-          id: r.id,
-          source: r.sourceId,
-          target: r.targetId,
+          id: String(r.id),
+          source: String(r.sourceId),
+          target: String(r.targetId),
           label: graphSettings.showLabels ? RELATIONSHIP_LABELS[r.type] || r.type : undefined,
-          type: graphSettings.edgeStyle === 'simplebezier' ? 'default' : graphSettings.edgeStyle,
+          type: edgeType === 'simplebezier' ? 'default' : edgeType,
           animated: variant === 'animated' || inPath,
           style: {
             stroke: inPath ? accent : stroke,
@@ -107,20 +118,22 @@ export default function GraphCanvas() {
             width: 16,
             height: 16,
           },
-          data: { relationship: r },
         } as Edge;
       });
   }, [
     relationships,
     filteredIds,
     highlightedPath,
-    graphSettings,
+    graphSettings.edgeVariant,
+    graphSettings.edgeThickness,
+    graphSettings.showLabels,
     appearance.accentColor,
     appearance.edgeColor,
+    edgeType,
   ]);
 
-  const [nodes, setNodes, onNodesChangeBase] = useNodesState(buildNodes());
-  const [edges, setEdges, onEdgesChange] = useEdgesState(buildEdges());
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   const structureKey = useMemo(() => {
     const eids = filteredEntities.map((e) => e.id).sort().join(',');
@@ -129,7 +142,7 @@ export default function GraphCanvas() {
       .map((r) => r.id)
       .sort()
       .join(',');
-    return `${activeCaseId}|${eids}|${rids}|${typeFilters.join(',')}|${graphSearchQuery}`;
+    return `${activeCaseId}|${eids}|${rids}|${(typeFilters || []).join(',')}|${graphSearchQuery || ''}`;
   }, [activeCaseId, filteredEntities, relationships, filteredIds, typeFilters, graphSearchQuery]);
 
   const prevStructure = useRef('');
@@ -153,10 +166,10 @@ export default function GraphCanvas() {
         data: {
           ...n.data,
           selected: n.id === selectedEntityId,
-          highlighted: highlightedPath.includes(n.id) || n.id === selectedEntityId,
-          pinned: pinnedNodeIds.includes(n.id),
+          highlighted: (highlightedPath || []).includes(n.id) || n.id === selectedEntityId,
+          pinned: (pinnedNodeIds || []).includes(n.id),
         },
-        draggable: !pinnedNodeIds.includes(n.id),
+        draggable: !(pinnedNodeIds || []).includes(n.id),
       }))
     );
   }, [selectedEntityId, highlightedPath, pinnedNodeIds, setNodes]);
@@ -179,7 +192,7 @@ export default function GraphCanvas() {
     (changes: NodeChange[]) => {
       onNodesChangeBase(changes);
       for (const ch of changes) {
-        if (ch.type === 'position' && ch.position && ch.id && ch.dragging === false) {
+        if (ch.type === 'position' && 'position' in ch && ch.position && ch.id && ch.dragging === false) {
           pushHistory(`Move ${ch.id}`);
           updateEntityPosition(ch.id, ch.position);
         }
@@ -212,7 +225,7 @@ export default function GraphCanvas() {
           {
             ...params,
             id,
-            type: graphSettings.edgeStyle,
+            type: edgeType === 'simplebezier' ? 'default' : edgeType,
             animated: graphSettings.edgeVariant === 'animated',
             style: {
               stroke: appearance.edgeColor || '#64748b',
@@ -223,7 +236,7 @@ export default function GraphCanvas() {
         )
       );
     },
-    [activeCaseId, addRelationship, setEdges, graphSettings, appearance.edgeColor]
+    [activeCaseId, addRelationship, setEdges, graphSettings, appearance.edgeColor, edgeType]
   );
 
   const onNodeClick = useCallback(
@@ -284,8 +297,8 @@ export default function GraphCanvas() {
     const cy = 350;
     setNodes((nds) =>
       nds.map((n, i) => {
-        let x = n.position.x;
-        let y = n.position.y;
+        let x = n.position?.x ?? 100;
+        let y = n.position?.y ?? 100;
         if (preset === 'grid') {
           const cols = Math.ceil(Math.sqrt(list.length));
           x = 80 + (i % cols) * 180;
@@ -341,11 +354,13 @@ export default function GraphCanvas() {
         onEdgeClick={onEdgeClick}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
-        fitView={false}
+        fitView
+        fitViewOptions={{ padding: 0.2 }}
         minZoom={0.15}
         maxZoom={2.5}
         proOptions={{ hideAttribution: true }}
         connectionRadius={30}
+        defaultEdgeOptions={{ type: 'smoothstep' }}
       >
         {variant !== 'none' && (
           <Background
