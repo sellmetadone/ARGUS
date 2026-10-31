@@ -2,7 +2,7 @@
   "port": 3030,
   "host": "argus.local",
   "openBrowser": true,
-  "lang": "en",
+  "lang": "ru",
   "color": true,
   "ascii": true,
   "clearScreen": true,
