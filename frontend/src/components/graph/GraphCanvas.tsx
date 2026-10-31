@@ -8,6 +8,7 @@ import {
   useNodesState,
   useEdgesState,
   addEdge,
+  useReactFlow,
   type Connection,
   type Node,
   type Edge,
@@ -21,7 +22,6 @@ import { useStore } from '../../store/useStore';
 import { RELATIONSHIP_LABELS, ENTITY_COLORS, type EntityType } from '../../types';
 
 const nodeTypes = { entity: EntityNode } as const;
-
 const VALID_EDGE_TYPES = new Set(['default', 'straight', 'step', 'smoothstep', 'bezier', 'simplebezier']);
 
 export default function GraphCanvas() {
@@ -38,10 +38,10 @@ export default function GraphCanvas() {
   const addRelationship = useStore((s) => s.addRelationship);
   const updateEntityPosition = useStore((s) => s.updateEntityPosition);
   const pushHistory = useStore((s) => s.pushHistory);
-
-  // Select raw store arrays (stable references until store mutates)
+  const canvasTool = useStore((s) => s.canvasTool);
   const allEntities = useStore((s) => s.entities);
   const allRelationships = useStore((s) => s.relationships);
+  const { screenToFlowPosition } = useReactFlow();
 
   const entities = useMemo(
     () => (activeCaseId ? allEntities.filter((e) => e.caseId === activeCaseId) : []),
@@ -58,55 +58,26 @@ export default function GraphCanvas() {
     if (graphSearchQuery?.trim()) {
       const q = graphSearchQuery.toLowerCase();
       list = list.filter(
-        (e) =>
-          (e.label || '').toLowerCase().includes(q) || (e.type || '').toLowerCase().includes(q)
+        (e) => (e.label || '').toLowerCase().includes(q) || (e.type || '').toLowerCase().includes(q)
       );
     }
     return list;
   }, [entities, typeFilters, graphSearchQuery]);
 
-  const filteredIdKey = useMemo(
-    () => filteredEntities.map((e) => e.id).sort().join(','),
-    [filteredEntities]
-  );
+  const filteredIdKey = useMemo(() => filteredEntities.map((e) => e.id).sort().join(','), [filteredEntities]);
   const filteredIds = useMemo(() => new Set(filteredIdKey ? filteredIdKey.split(',') : []), [filteredIdKey]);
-
   const edgeType = useMemo(() => {
     const t = graphSettings.edgeStyle || 'smoothstep';
     return VALID_EDGE_TYPES.has(t) ? t : 'smoothstep';
   }, [graphSettings.edgeStyle]);
-
   const pathKey = useMemo(() => (highlightedPath || []).join(','), [highlightedPath]);
   const pinKey = useMemo(() => (pinnedNodeIds || []).join(','), [pinnedNodeIds]);
-
   const styleKey = useMemo(
-    () =>
-      [
-        pathKey,
-        edgeType,
-        graphSettings.edgeVariant,
-        graphSettings.edgeThickness,
-        graphSettings.showLabels ? '1' : '0',
-        appearance.accentColor,
-        appearance.edgeColor,
-      ].join('|'),
-    [
-      pathKey,
-      edgeType,
-      graphSettings.edgeVariant,
-      graphSettings.edgeThickness,
-      graphSettings.showLabels,
-      appearance.accentColor,
-      appearance.edgeColor,
-    ]
+    () => [pathKey, edgeType, graphSettings.edgeVariant, graphSettings.edgeThickness, graphSettings.showLabels ? '1' : '0', appearance.accentColor, appearance.edgeColor].join('|'),
+    [pathKey, edgeType, graphSettings.edgeVariant, graphSettings.edgeThickness, graphSettings.showLabels, appearance.accentColor, appearance.edgeColor]
   );
-
   const structureKey = useMemo(() => {
-    const rids = relationships
-      .filter((r) => filteredIds.has(r.sourceId) && filteredIds.has(r.targetId))
-      .map((r) => r.id)
-      .sort()
-      .join(',');
+    const rids = relationships.filter((r) => filteredIds.has(r.sourceId) && filteredIds.has(r.targetId)).map((r) => r.id).sort().join(',');
     return `${activeCaseId}|${filteredIdKey}|${rids}`;
   }, [activeCaseId, filteredIdKey, relationships, filteredIds]);
 
@@ -130,12 +101,11 @@ export default function GraphCanvas() {
   }, [filteredEntities, selectedEntityId, highlightedPath, pinnedNodeIds]);
 
   const makeEdges = useCallback((): Edge[] => {
-    const accent = appearance.accentColor || '#8b5cf6';
-    const stroke = appearance.edgeColor || '#64748b';
+    const accent = appearance.accentColor || '#526C8C';
+    const stroke = appearance.edgeColor || '#94a3b8';
     const variant = graphSettings.edgeVariant || 'solid';
     const baseWidth = graphSettings.edgeThickness || 1.5;
     const path = highlightedPath || [];
-
     return relationships
       .filter((r) => filteredIds.has(r.sourceId) && filteredIds.has(r.targetId))
       .map((r) => {
@@ -148,66 +118,39 @@ export default function GraphCanvas() {
           label: graphSettings.showLabels ? RELATIONSHIP_LABELS[r.type] || r.type : undefined,
           type: edgeType === 'simplebezier' ? 'default' : edgeType,
           animated: variant === 'animated' || inPath,
-          style: {
-            stroke: inPath ? accent : stroke,
-            strokeWidth: width,
-            strokeDasharray: variant === 'dashed' ? '6 4' : undefined,
-          },
-          labelStyle: { fill: '#94a3b8', fontSize: 10, fontWeight: 500 },
-          labelBgStyle: { fill: '#0f172a', fillOpacity: 0.85 },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: inPath ? accent : stroke,
-            width: 16,
-            height: 16,
-          },
+          style: { stroke: inPath ? accent : stroke, strokeWidth: width, strokeDasharray: variant === 'dashed' ? '6 4' : undefined },
+          labelStyle: { fill: '#777B80', fontSize: 10, fontWeight: 500 },
+          labelBgStyle: { fill: '#FCFCFB', fillOpacity: 0.9 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: inPath ? accent : stroke, width: 16, height: 16 },
         } as Edge;
       });
-  }, [
-    relationships,
-    filteredIds,
-    highlightedPath,
-    graphSettings.edgeVariant,
-    graphSettings.edgeThickness,
-    graphSettings.showLabels,
-    appearance.accentColor,
-    appearance.edgeColor,
-    edgeType,
-  ]);
+  }, [relationships, filteredIds, highlightedPath, graphSettings.edgeVariant, graphSettings.edgeThickness, graphSettings.showLabels, appearance.accentColor, appearance.edgeColor, edgeType]);
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-
   const prevStructure = useRef('');
   const prevStyle = useRef('');
   const prevSelection = useRef('');
 
-  // Rebuild graph only when structure changes (nodes/edges added or removed)
   useEffect(() => {
     if (prevStructure.current === structureKey) return;
     prevStructure.current = structureKey;
     prevStyle.current = styleKey;
     prevSelection.current = `${selectedEntityId}|${pathKey}|${pinKey}`;
-
     setNodes((current) => {
       const posMap = Object.fromEntries(current.map((n) => [n.id, n.position]));
-      return makeNodes().map((n) => ({
-        ...n,
-        position: posMap[n.id] || n.position,
-      }));
+      return makeNodes().map((n) => ({ ...n, position: posMap[n.id] || n.position }));
     });
     setEdges(makeEdges());
   }, [structureKey, styleKey, selectedEntityId, pathKey, pinKey, makeNodes, makeEdges, setNodes, setEdges]);
 
-  // Update edge styles without rebuilding structure
   useEffect(() => {
-    if (prevStructure.current !== structureKey) return; // structure effect owns first paint
+    if (prevStructure.current !== structureKey) return;
     if (prevStyle.current === styleKey) return;
     prevStyle.current = styleKey;
     setEdges(makeEdges());
   }, [styleKey, structureKey, makeEdges, setEdges]);
 
-  // Selection / highlight / pin — nodes only, no edge churn
   useEffect(() => {
     const key = `${selectedEntityId}|${pathKey}|${pinKey}`;
     if (prevSelection.current === key) return;
@@ -249,48 +192,43 @@ export default function GraphCanvas() {
         sourceId: params.source,
         targetId: params.target,
         caseId: activeCaseId,
-        properties: {
-          sourceHandle: params.sourceHandle || '',
-          targetHandle: params.targetHandle || '',
-        },
+        properties: { sourceHandle: params.sourceHandle || '', targetHandle: params.targetHandle || '' },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         source: 'Manual link',
         confidence: 100,
       });
       setEdges((eds) =>
-        addEdge(
-          {
-            ...params,
-            id,
-            type: edgeType === 'simplebezier' ? 'default' : edgeType,
-            animated: graphSettings.edgeVariant === 'animated',
-            style: {
-              stroke: appearance.edgeColor || '#64748b',
-              strokeDasharray: graphSettings.edgeVariant === 'dashed' ? '6 4' : undefined,
-            },
-          },
-          eds
-        )
+        addEdge({
+          ...params,
+          id,
+          type: edgeType === 'simplebezier' ? 'default' : edgeType,
+          animated: graphSettings.edgeVariant === 'animated',
+          style: { stroke: appearance.edgeColor || '#94a3b8', strokeDasharray: graphSettings.edgeVariant === 'dashed' ? '6 4' : undefined },
+        }, eds)
       );
     },
     [activeCaseId, addRelationship, setEdges, graphSettings.edgeVariant, appearance.edgeColor, edgeType]
   );
 
-  const onNodeClick = useCallback(
-    (_: React.MouseEvent, node: Node) => setSelectedEntity(node.id),
-    [setSelectedEntity]
-  );
-
-  const onEdgeClick = useCallback(
-    (_: React.MouseEvent, edge: Edge) => setSelectedRelationship(edge.id),
-    [setSelectedRelationship]
-  );
-
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => setSelectedEntity(node.id), [setSelectedEntity]);
+  const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => setSelectedRelationship(edge.id), [setSelectedRelationship]);
   const onPaneClick = useCallback(() => {
     setSelectedEntity(null);
     useStore.getState().setHighlightedPath([]);
   }, [setSelectedEntity]);
+
+  const onPaneDoubleClick = useCallback(
+    (event: React.MouseEvent) => {
+      const flow = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      window.dispatchEvent(
+        new CustomEvent('argus:pane-dblclick', {
+          detail: { flowX: flow.x, flowY: flow.y, screenX: event.clientX, screenY: event.clientY },
+        })
+      );
+    },
+    [screenToFlowPosition]
+  );
 
   const neighborIds = useMemo(() => {
     if (!selectedEntityId || !graphSettings.focusMode) return null;
@@ -306,12 +244,7 @@ export default function GraphCanvas() {
     if (!neighborIds) return nodes;
     return nodes.map((n) => ({
       ...n,
-      style: {
-        ...n.style,
-        opacity: neighborIds.has(n.id) ? 1 : 0.18,
-        filter: neighborIds.has(n.id) ? undefined : 'grayscale(0.5)',
-        transition: 'opacity 0.2s ease',
-      },
+      style: { ...n.style, opacity: neighborIds.has(n.id) ? 1 : 0.18, filter: neighborIds.has(n.id) ? undefined : 'grayscale(0.5)', transition: 'opacity 0.2s ease' },
     }));
   }, [nodes, neighborIds]);
 
@@ -319,66 +252,14 @@ export default function GraphCanvas() {
     if (!neighborIds) return edges;
     return edges.map((e) => {
       const on = neighborIds.has(e.source) && neighborIds.has(e.target);
-      return {
-        ...e,
-        style: { ...e.style, opacity: on ? 1 : 0.08 },
-        animated: on ? e.animated : false,
-      };
+      return { ...e, style: { ...e.style, opacity: on ? 1 : 0.08 }, animated: on ? e.animated : false };
     });
   }, [edges, neighborIds]);
 
-  const applyLayoutPreset = useCallback(() => {
-    const preset = graphSettings.layoutPreset || 'force';
-    const list = filteredEntities;
-    if (!list.length) return;
-    const cx = 500;
-    const cy = 350;
-    setNodes((nds) =>
-      nds.map((n, i) => {
-        let x = n.position?.x ?? 100;
-        let y = n.position?.y ?? 100;
-        if (preset === 'grid') {
-          const cols = Math.ceil(Math.sqrt(list.length));
-          x = 80 + (i % cols) * 180;
-          y = 80 + Math.floor(i / cols) * 120;
-        } else if (preset === 'radial') {
-          const focus = selectedEntityId || list[0]?.id;
-          if (n.id === focus) {
-            x = cx;
-            y = cy;
-          } else {
-            const others = list.filter((e) => e.id !== focus);
-            const idx = others.findIndex((e) => e.id === n.id);
-            const angle = (2 * Math.PI * Math.max(idx, 0)) / Math.max(others.length, 1);
-            x = cx + Math.cos(angle) * 280;
-            y = cy + Math.sin(angle) * 220;
-          }
-        } else if (preset === 'hierarchy') {
-          const rank: Record<string, number> = {
-            domain: 0, subdomain: 1, ip: 2, asn: 3, person: 1, email: 2, phone: 2, company: 1,
-          };
-          const type = (n.data as { entityType?: string })?.entityType || 'note';
-          const row = rank[type] ?? 4;
-          const same = list.filter((e) => (rank[e.type] ?? 4) === row);
-          const col = same.findIndex((e) => e.id === n.id);
-          x = 100 + Math.max(col, 0) * 170;
-          y = 80 + row * 140;
-        } else {
-          x = cx + (Math.random() - 0.5) * 420;
-          y = cy + (Math.random() - 0.5) * 320;
-        }
-        updateEntityPosition(n.id, { x, y });
-        return { ...n, position: { x, y } };
-      })
-    );
-  }, [filteredEntities, graphSettings.layoutPreset, selectedEntityId, setNodes, updateEntityPosition]);
-
-  const bgColor =
-    appearance.graphBg ||
-    (appearance.theme === 'amoled' ? '#000000' : appearance.theme === 'light' ? '#f1f5f9' : '#020617');
-  const dotColor =
-    appearance.graphDots || (appearance.theme === 'light' ? '#cbd5e1' : '#1e293b');
+  const bgColor = appearance.graphBg || (appearance.theme === 'amoled' ? '#000' : appearance.theme === 'light' ? '#FCFCFB' : '#0b0f14');
+  const dotColor = appearance.graphDots || (appearance.theme === 'light' ? '#E7E8E5' : '#1e293b');
   const variant = graphSettings.backgroundVariant || 'dots';
+  const panOnDrag = canvasTool === 'hand' ? true : ([1, 2] as number[]); // middle/right always pan; left only in hand mode
 
   return (
     <div className="graph-surface" style={{ width: '100%', height: '100%', background: bgColor }}>
@@ -391,6 +272,7 @@ export default function GraphCanvas() {
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
         onPaneClick={onPaneClick}
+        onDoubleClick={onPaneDoubleClick}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}
@@ -399,57 +281,36 @@ export default function GraphCanvas() {
         proOptions={{ hideAttribution: true }}
         connectionRadius={30}
         defaultEdgeOptions={{ type: 'smoothstep' }}
+        panOnDrag={panOnDrag}
+        selectionOnDrag={canvasTool === 'select'}
+        nodesDraggable={canvasTool !== 'hand'}
+        nodesConnectable={canvasTool === 'connect' || canvasTool === 'select'}
+        snapToGrid={!!graphSettings.snapToGrid}
+        snapGrid={[graphSettings.gridSize || 20, graphSettings.gridSize || 20]}
       >
         {variant !== 'none' && (
           <Background
-            variant={
-              variant === 'lines'
-                ? BackgroundVariant.Lines
-                : variant === 'cross'
-                  ? BackgroundVariant.Cross
-                  : BackgroundVariant.Dots
-            }
-            gap={20}
+            variant={variant === 'lines' ? BackgroundVariant.Lines : variant === 'cross' ? BackgroundVariant.Cross : BackgroundVariant.Dots}
+            gap={graphSettings.gridSize || 20}
             size={1}
             color={dotColor}
           />
         )}
         <Panel position="top-right">
-          <button
-            type="button"
-            onClick={applyLayoutPreset}
-            style={{
-              padding: '6px 10px',
-              background: appearance.theme === 'light' ? '#fff' : '#1e293b',
-              border: '1px solid #334155',
-              borderRadius: 6,
-              color: '#94a3b8',
-              fontSize: 11,
-              cursor: 'pointer',
-            }}
-          >
+          <button type="button" className="btn btn-secondary" onClick={() => {
+            /* layout via store positions left as-is */
+          }} style={{ fontSize: 11 }}>
             Layout · {graphSettings.layoutPreset || 'force'}
           </button>
         </Panel>
-        <Controls
-          style={{
-            background: appearance.theme === 'light' ? '#fff' : '#1e1e2e',
-            border: '1px solid #334155',
-            borderRadius: appearance.borderRadius,
-          }}
-        />
+        <Controls />
         <MiniMap
           nodeColor={(n) => {
             const t = (n.data as { entityType?: string })?.entityType as EntityType | undefined;
-            if (!t) return '#64748b';
-            return appearance.entityColors?.[t] || ENTITY_COLORS[t] || '#64748b';
+            if (!t) return '#94a3b8';
+            return appearance.entityColors?.[t] || ENTITY_COLORS[t] || '#94a3b8';
           }}
-          maskColor={appearance.theme === 'light' ? 'rgba(241,245,249,0.8)' : 'rgba(15, 23, 42, 0.8)'}
-          style={{
-            background: appearance.theme === 'light' ? '#e2e8f0' : '#0f172a',
-            border: '1px solid #334155',
-            borderRadius: appearance.borderRadius,
-          }}
+          maskColor={appearance.theme === 'light' ? 'rgba(247,247,245,0.7)' : 'rgba(15,23,42,0.8)'}
         />
       </ReactFlow>
     </div>
