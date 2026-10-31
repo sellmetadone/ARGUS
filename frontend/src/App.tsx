@@ -253,6 +253,31 @@ export default function App() {
         {panels.tutorial && <TutorialPanel />}
       </div>
 
+      <div
+        style={{
+          height: 22,
+          flexShrink: 0,
+          borderTop: '1px solid #1e293b',
+          background: headerBg,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          fontSize: 10,
+          color: '#64748b',
+        }}
+      >
+        <span>ARGUS · sellmetadone</span>
+        <span>·</span>
+        <a href="https://t.me/sofia_white_death" target="_blank" rel="noreferrer" style={{ color: '#94a3b8', textDecoration: 'none' }}>
+          @sofia_white_death
+        </a>
+        <span>·</span>
+        <a href="https://t.me/argus_platform" target="_blank" rel="noreferrer" style={{ color: '#94a3b8', textDecoration: 'none' }}>
+          t.me/argus_platform
+        </a>
+      </div>
+
       <CommandPalette />
     </div>
   );
