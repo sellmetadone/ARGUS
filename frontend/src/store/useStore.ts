@@ -83,6 +83,8 @@ interface AppState {
   removeEntity: (id: string) => void;
   updateEntityPosition: (id: string, position: { x: number; y: number }) => void;
   addRelationship: (r: Relationship) => void;
+  updateRelationship: (id: string, data: Partial<Relationship>) => void;
+  removeRelationship: (id: string) => void;
   pinnedNodeIds: string[];
   togglePinNode: (id: string) => void;
   typeFilters: EntityType[];
@@ -281,6 +283,28 @@ export const useStore = create<AppState>((set, get) => ({
   addRelationship: (r) => {
     get().pushHistory(`Add relationship ${r.type}`);
     set((s) => ({ relationships: [...s.relationships, r] }));
+  },
+  updateRelationship: (id, data) => {
+    get().pushHistory(`Update relationship ${id}`);
+    set((s) => ({
+      relationships: s.relationships.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              ...data,
+              properties: data.properties ? { ...r.properties, ...data.properties } : r.properties,
+              updatedAt: new Date().toISOString(),
+            }
+          : r
+      ),
+    }));
+  },
+  removeRelationship: (id) => {
+    get().pushHistory('Remove relationship');
+    set((s) => ({
+      relationships: s.relationships.filter((r) => r.id !== id),
+      selectedRelationshipId: s.selectedRelationshipId === id ? null : s.selectedRelationshipId,
+    }));
   },
   pinnedNodeIds: [],
   togglePinNode: (id) =>
