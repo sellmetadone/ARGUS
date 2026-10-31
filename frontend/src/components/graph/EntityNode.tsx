@@ -14,8 +14,8 @@ export interface EntityNodeData {
 
 const handleStyle = (color: string): React.CSSProperties => ({
   background: color,
-  width: 9,
-  height: 9,
+  width: 8,
+  height: 8,
   border: '2px solid #0f172a',
 });
 
@@ -25,80 +25,92 @@ function EntityNode({ data, selected }: NodeProps) {
   const graphSettings = useStore((s) => s.graphSettings);
   const custom = appearance.entityColors?.[nodeData.entityType];
   const color = custom || ENTITY_COLORS[nodeData.entityType] || '#64748b';
-  const icon = ENTITY_ICONS[nodeData.entityType] || '●';
-  const scale = graphSettings.nodeSize;
+  const icon = ENTITY_ICONS[nodeData.entityType] || '•';
+  const scale = graphSettings.nodeSize || 1;
   const isActive = selected || nodeData.highlighted;
+  const light = appearance.theme === 'light';
 
   return (
     <div
       style={{
-        background: isActive ? `${color}33` : appearance.theme === 'light' ? '#fff' : '#1e1e2e',
-        border: `2px solid ${isActive ? color : appearance.theme === 'light' ? '#cbd5e1' : '#334155'}`,
-        borderRadius: appearance.borderRadius,
-        padding: `${6 * scale}px ${10 * scale}px`,
-        minWidth: 100 * scale,
+        background: isActive ? `${color}28` : light ? '#ffffff' : '#0f172a',
+        border: `1.5px solid ${isActive ? color : light ? '#cbd5e1' : '#334155'}`,
+        borderRadius: Math.max(6, appearance.borderRadius || 8),
+        padding: `${7 * scale}px ${12 * scale}px`,
+        minWidth: 110 * scale,
         maxWidth: 220 * scale,
         boxShadow: isActive
-          ? `0 0 14px ${color}66`
-          : appearance.theme === 'light'
-            ? '0 1px 4px rgba(0,0,0,0.1)'
-            : '0 2px 8px rgba(0,0,0,0.4)',
-        transition: appearance.animations ? 'box-shadow 0.2s, border-color 0.2s' : 'none',
+          ? `0 0 0 1px ${color}55, 0 4px 16px ${color}33`
+          : light
+            ? '0 1px 3px rgba(0,0,0,0.08)'
+            : '0 2px 8px rgba(0,0,0,0.35)',
+        transition: appearance.animations === false ? 'none' : 'box-shadow 0.15s ease, border-color 0.15s ease',
         cursor: 'pointer',
         position: 'relative',
-        opacity: appearance.transparency,
       }}
     >
       {nodeData.pinned && (
         <div
+          title="Pinned"
           style={{
             position: 'absolute',
-            top: -6,
-            right: -6,
-            background: appearance.accentColor,
+            top: -5,
+            right: -5,
+            width: 12,
+            height: 12,
             borderRadius: '50%',
-            width: 14,
-            height: 14,
-            fontSize: 8,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            background: appearance.accentColor || color,
+            border: '2px solid #0f172a',
+            boxShadow: '0 0 0 1px rgba(255,255,255,0.15)',
           }}
-        >
-          📌
-        </div>
+        />
       )}
 
       <Handle type="target" position={Position.Top} id="t-top" style={handleStyle(color)} />
-      <Handle type="source" position={Position.Top} id="s-top" style={{ ...handleStyle(color), top: -5 }} />
+      <Handle type="source" position={Position.Top} id="s-top" style={{ ...handleStyle(color), top: -4 }} />
       <Handle type="target" position={Position.Bottom} id="t-bottom" style={handleStyle(color)} />
-      <Handle type="source" position={Position.Bottom} id="s-bottom" style={{ ...handleStyle(color), bottom: -5 }} />
+      <Handle type="source" position={Position.Bottom} id="s-bottom" style={{ ...handleStyle(color), bottom: -4 }} />
       <Handle type="target" position={Position.Left} id="t-left" style={handleStyle(color)} />
-      <Handle type="source" position={Position.Left} id="s-left" style={{ ...handleStyle(color), left: -5 }} />
+      <Handle type="source" position={Position.Left} id="s-left" style={{ ...handleStyle(color), left: -4 }} />
       <Handle type="target" position={Position.Right} id="t-right" style={handleStyle(color)} />
-      <Handle type="source" position={Position.Right} id="s-right" style={{ ...handleStyle(color), right: -5 }} />
+      <Handle type="source" position={Position.Right} id="s-right" style={{ ...handleStyle(color), right: -4 }} />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontSize: 14 * scale }}>{icon}</span>
-        <div style={{ overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span
+          style={{
+            fontSize: 10 * scale,
+            fontWeight: 700,
+            letterSpacing: 0.3,
+            color,
+            background: `${color}18`,
+            borderRadius: 4,
+            padding: '2px 5px',
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </span>
+        <div style={{ overflow: 'hidden', minWidth: 0 }}>
           <div
             style={{
-              fontSize: 10 * scale,
+              fontSize: 9 * scale,
               color,
               fontWeight: 600,
               textTransform: 'uppercase',
-              letterSpacing: 0.4,
+              letterSpacing: 0.5,
+              opacity: 0.9,
             }}
           >
-            {nodeData.entityType}
+            {nodeData.entityType.replace(/_/g, ' ')}
           </div>
           <div
             style={{
               fontSize: 12 * scale,
-              color: appearance.theme === 'light' ? '#0f172a' : '#e2e8f0',
+              color: light ? '#0f172a' : '#e2e8f0',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              fontWeight: 500,
             }}
             title={nodeData.label}
           >

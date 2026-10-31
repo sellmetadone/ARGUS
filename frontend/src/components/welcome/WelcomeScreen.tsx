@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Plus, FolderOpen, GraduationCap, Settings, Network } from 'lucide-react';
+import { Plus, FolderOpen, GraduationCap, Settings } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 
 export default function WelcomeScreen() {
@@ -17,7 +17,7 @@ export default function WelcomeScreen() {
   const enterApp = () => setShowWelcome(false);
 
   const newCanvas = () => {
-    const name = window.prompt('Название нового холста / кейса:', `Canvas ${cases.length + 1}`);
+    const name = window.prompt('Case name:', `Canvas ${cases.length + 1}`);
     if (name === null) return;
     const id = `case-${Date.now()}`;
     addCase({
@@ -59,21 +59,11 @@ export default function WelcomeScreen() {
         importGraph(JSON.stringify({ entities: ents, relationships: rels }));
         setShowWelcome(false);
       } else {
-        alert('Неверный формат. Нужен JSON: { name?, entities, relationships }');
+        alert('Invalid format. Expected JSON: { name?, entities, relationships }');
       }
     } catch {
-      alert('Не удалось прочитать файл');
+      alert('Could not read file');
     }
-  };
-
-  const openTutorial = () => {
-    setShowWelcome(false);
-    setPanel('tutorial', true);
-  };
-
-  const openSettings = () => {
-    setShowWelcome(false);
-    setPanel('settings', true);
   };
 
   return (
@@ -90,60 +80,101 @@ export default function WelcomeScreen() {
     >
       <div
         style={{
-          width: 420,
+          width: 400,
           maxWidth: '92vw',
-          background: '#0f172aee',
+          background: 'rgba(15, 23, 42, 0.92)',
           border: '1px solid #334155',
-          borderRadius: 16,
-          padding: 28,
-          boxShadow: '0 25px 80px rgba(0,0,0,0.55)',
+          borderRadius: 14,
+          padding: '32px 28px 24px',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
         }}
       >
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <Network size={40} color={appearance.accentColor} style={{ marginBottom: 10 }} />
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: 3, color: '#e2e8f0' }}>ARGUS</div>
-          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>Cyber Investigation Graph</div>
-          <div style={{ fontSize: 11, color: '#64748b', marginTop: 10, lineHeight: 1.5 }}>
-            by <span style={{ color: '#c4b5fd' }}>sellmetadone</span>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <img
+            src="/argus_logo.svg"
+            alt="ARGUS"
+            width={72}
+            height={72}
+            style={{
+              display: 'block',
+              margin: '0 auto 14px',
+              borderRadius: 12,
+            }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = '/favicon.svg';
+            }}
+          />
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              letterSpacing: 4,
+              color: '#e8eaf6',
+            }}
+          >
+            ARGUS
+          </div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>
+            Cyber Investigation Graph
+          </div>
+          <div style={{ fontSize: 11, color: '#64748b', marginTop: 10, lineHeight: 1.55 }}>
+            by{' '}
+            <span style={{ color: '#a5b4fc' }}>sellmetadone</span>
             <br />
-            <a href="https://t.me/sofia_white_death" target="_blank" rel="noreferrer" style={{ color: '#94a3b8' }}>
+            <a
+              href="https://t.me/sofia_white_death"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: '#94a3b8', textDecoration: 'none' }}
+            >
               @sofia_white_death
             </a>
             {' · '}
-            <a href="https://t.me/argus_platform" target="_blank" rel="noreferrer" style={{ color: '#94a3b8' }}>
+            <a
+              href="https://t.me/argus_platform"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: '#94a3b8', textDecoration: 'none' }}
+            >
               t.me/argus_platform
             </a>
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <MenuBtn
-            icon={<Plus size={18} />}
-            title="1. Новый холст"
-            subtitle="Пустой кейс / граф расследования"
+            icon={<Plus size={17} strokeWidth={2} />}
+            title="New canvas"
+            subtitle="Empty investigation case"
             accent={appearance.accentColor}
             onClick={newCanvas}
           />
           <MenuBtn
-            icon={<FolderOpen size={18} />}
-            title="2. Загрузить JSON"
-            subtitle="Импорт entities + relationships"
+            icon={<FolderOpen size={17} strokeWidth={2} />}
+            title="Load JSON"
+            subtitle="Import entities and relationships"
             accent={appearance.accentColor}
             onClick={() => fileRef.current?.click()}
           />
           <MenuBtn
-            icon={<GraduationCap size={18} />}
-            title="3. Обучение"
-            subtitle="OSINT цикл, Shodan, CLI"
+            icon={<GraduationCap size={17} strokeWidth={2} />}
+            title="Tutorial"
+            subtitle="OSINT flow, search, CLI"
             accent={appearance.accentColor}
-            onClick={openTutorial}
+            onClick={() => {
+              setShowWelcome(false);
+              setPanel('tutorial', true);
+            }}
           />
           <MenuBtn
-            icon={<Settings size={18} />}
-            title="4. Настройки"
-            subtitle="Тема, цвета, язык, Shodan API"
+            icon={<Settings size={17} strokeWidth={2} />}
+            title="Settings"
+            subtitle="Theme, language, API keys"
             accent={appearance.accentColor}
-            onClick={openSettings}
+            onClick={() => {
+              setShowWelcome(false);
+              setPanel('settings', true);
+            }}
           />
         </div>
 
@@ -159,20 +190,21 @@ export default function WelcomeScreen() {
         />
 
         <button
+          type="button"
           onClick={enterApp}
           style={{
-            marginTop: 20,
+            marginTop: 18,
             width: '100%',
             padding: '10px',
             background: 'transparent',
-            border: 'none',
-            color: '#64748b',
+            border: '1px solid #334155',
+            borderRadius: 8,
+            color: '#94a3b8',
             fontSize: 12,
             cursor: 'pointer',
-            textDecoration: 'underline',
           }}
         >
-          Продолжить с текущим кейсом →
+          Continue with current case
         </button>
       </div>
     </div>
@@ -194,36 +226,36 @@ function MenuBtn({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 14,
+        gap: 12,
         width: '100%',
-        padding: '14px 16px',
+        padding: '12px 14px',
         textAlign: 'left',
         background: 'transparent',
-        border: '1px solid #33415555',
-        borderRadius: 10,
+        border: '1px solid #334155',
+        borderRadius: 8,
         cursor: 'pointer',
         color: 'inherit',
-        transition: 'border-color 0.2s, background 0.2s',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = accent;
-        e.currentTarget.style.background = `${accent}18`;
+        e.currentTarget.style.background = `${accent}14`;
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#33415555';
+        e.currentTarget.style.borderColor = '#334155';
         e.currentTarget.style.background = 'transparent';
       }}
     >
       <div
         style={{
-          width: 40,
-          height: 40,
-          borderRadius: 10,
-          background: `${accent}22`,
+          width: 36,
+          height: 36,
+          borderRadius: 8,
+          background: `${accent}20`,
           color: accent,
           display: 'flex',
           alignItems: 'center',
@@ -234,7 +266,7 @@ function MenuBtn({
         {icon}
       </div>
       <div>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0' }}>{title}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{title}</div>
         <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{subtitle}</div>
       </div>
     </button>
