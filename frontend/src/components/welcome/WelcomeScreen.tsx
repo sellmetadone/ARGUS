@@ -103,6 +103,17 @@ export default function WelcomeScreen() {
           <Network size={40} color={appearance.accentColor} style={{ marginBottom: 10 }} />
           <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: 3, color: '#e2e8f0' }}>ARGUS</div>
           <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>Cyber Investigation Graph</div>
+          <div style={{ fontSize: 11, color: '#64748b', marginTop: 10, lineHeight: 1.5 }}>
+            by <span style={{ color: '#c4b5fd' }}>sellmetadone</span>
+            <br />
+            <a href="https://t.me/sofia_white_death" target="_blank" rel="noreferrer" style={{ color: '#94a3b8' }}>
+              @sofia_white_death
+            </a>
+            {' · '}
+            <a href="https://t.me/argus_platform" target="_blank" rel="noreferrer" style={{ color: '#94a3b8' }}>
+              t.me/argus_platform
+            </a>
+          </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
