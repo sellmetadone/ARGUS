@@ -1,36 +1,43 @@
-/** Lightweight event bus — modules communicate without tight coupling */
 type Handler = (payload?: unknown) => void;
 
-class EventBus {
-  private map = new Map<string, Set<Handler>>();
+export const ArgusEvents = {
+  MODULE_LOADED: 'module:loaded',
+  CASE_SAVED: 'case:saved',
+  CASE_LOADED: 'case:loaded',
+  GRAPH_CHANGED: 'graph:changed',
+  SEARCH_DONE: 'search:done',
+} as const;
 
-  on(event: string, handler: Handler) {
-    if (!this.map.has(event)) this.map.set(event, new Set());
-    this.map.get(event)!.add(handler);
+export type ArgusEventName = (typeof ArgusEvents)[keyof typeof ArgusEvents] | string;
+
+class EventBus {
+  private listeners = new Map<string, Set<Handler>>();
+
+  on(event: ArgusEventName, handler: Handler) {
+    if (!this.listeners.has(event)) this.listeners.set(event, new Set());
+    this.listeners.get(event)!.add(handler);
     return () => this.off(event, handler);
   }
 
-  off(event: string, handler: Handler) {
-    this.map.get(event)?.delete(handler);
+  off(event: ArgusEventName, handler: Handler) {
+    this.listeners.get(event)?.delete(handler);
   }
 
-  emit(event: string, payload?: unknown) {
-    this.map.get(event)?.forEach((h) => {
+  emit(event: ArgusEventName, payload?: unknown) {
+    const set = this.listeners.get(event);
+    if (!set) return;
+    for (const h of set) {
       try {
         h(payload);
       } catch (e) {
-        console.error('[EventBus]', event, e);
+        console.error('[eventBus]', event, e);
       }
-    });
+    }
+  }
+
+  clear() {
+    this.listeners.clear();
   }
 }
 
 export const eventBus = new EventBus();
-export const ArgusEvents = {
-  CASE_CHANGED: 'case:changed',
-  ENTITY_ADDED: 'entity:added',
-  GRAPH_LINKED: 'graph:linked',
-  SEARCH_DONE: 'search:done',
-  SETTINGS_CHANGED: 'settings:changed',
-  MODULE_LOADED: 'module:loaded',
-} as const;
