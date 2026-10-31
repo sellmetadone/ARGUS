@@ -12,7 +12,6 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "oxlint",
     "preview": "vite preview",
     "argus": "node argus-cli.mjs",
     "cli": "node argus-cli.mjs cli",
@@ -43,5 +42,5 @@
   "bin": {
     "argus": "./argus-cli.mjs"
   },
-  "description": "Argus — interactive cyber investigation graph for OSINT link analysis by sellmetadone"
+  "description": "Argus — interactive cyber investigation graph for OSINT by sellmetadone"
 }

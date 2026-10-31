@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { LANG_META, type LangCode } from '../../i18n/locales';
+import { validateGraphIntegrity, formatIntegrityReport } from '../../services/integrity';
 
 export default function SettingsPanel() {
   const { setPanel, appearance, setAppearance, graphSettings, setGraphSettings, shodanApiKey, setShodanApiKey } =
@@ -23,7 +24,7 @@ export default function SettingsPanel() {
     >
       <div style={{ padding: '14px 16px', borderBottom: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', letterSpacing: 1 }}>SETTINGS</span>
-        <button onClick={() => setPanel('settings', false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+        <button type="button" onClick={() => setPanel('settings', false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
           <X size={16} />
         </button>
       </div>
@@ -64,7 +65,7 @@ export default function SettingsPanel() {
           </select>
         </Section>
 
-        <Section title="Focus mode (Obsidian-style)">
+        <Section title="Focus mode">
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
             <input
               type="checkbox"
@@ -92,32 +93,6 @@ export default function SettingsPanel() {
           </select>
         </Section>
 
-        <Section title="Edge style">
-          <select
-            value={graphSettings.edgeStyle}
-            onChange={(e) => setGraphSettings({ edgeStyle: e.target.value as any })}
-            style={selectStyle}
-          >
-            <option value="smoothstep">Smoothstep</option>
-            <option value="bezier">Bezier</option>
-            <option value="straight">Straight</option>
-            <option value="step">Step</option>
-          </select>
-        </Section>
-
-        <Section title="Edge variant">
-          <select
-            value={graphSettings.edgeVariant}
-            onChange={(e) => setGraphSettings({ edgeVariant: e.target.value as any })}
-            style={selectStyle}
-          >
-            <option value="solid">Solid</option>
-            <option value="dashed">Dashed</option>
-            <option value="animated">Animated</option>
-            <option value="thick">Thick</option>
-          </select>
-        </Section>
-
         <Section title="3D graph">
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
             <input
@@ -134,7 +109,7 @@ export default function SettingsPanel() {
             type="password"
             value={shodanApiKey}
             onChange={(e) => setShodanApiKey(e.target.value)}
-            placeholder="Optional — stored in localStorage only"
+            placeholder="Optional — localStorage only"
             style={{
               width: '100%',
               padding: '8px 10px',
@@ -145,6 +120,35 @@ export default function SettingsPanel() {
               fontSize: 12,
             }}
           />
+        </Section>
+
+        <Section title="Data integrity">
+          <button
+            type="button"
+            onClick={() => {
+              const s = useStore.getState();
+              const issues = validateGraphIntegrity({
+                cases: s.cases,
+                entities: s.entities,
+                relationships: s.relationships,
+                timeline: s.timeline,
+                caseId: s.activeCaseId,
+              });
+              alert(formatIntegrityReport(issues));
+            }}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              background: '#1e293b',
+              border: '1px solid #334155',
+              borderRadius: 6,
+              color: '#e2e8f0',
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            Validate active case
+          </button>
         </Section>
       </div>
     </div>
