@@ -1,0 +1,11 @@
+/* Argus app chrome — mostly layout is inline; keep minimal legacy/vite styles */
+.argus-shell {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.graph-surface {
+  width: 100%;
+  height: 100%;
+}
