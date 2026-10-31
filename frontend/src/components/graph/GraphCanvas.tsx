@@ -20,32 +20,37 @@ import EntityNode from './EntityNode';
 import { useStore } from '../../store/useStore';
 import { RELATIONSHIP_LABELS, ENTITY_COLORS, type EntityType } from '../../types';
 
-/** Stable reference — must not be recreated each render (React Flow requirement) */
 const nodeTypes = { entity: EntityNode } as const;
 
 const VALID_EDGE_TYPES = new Set(['default', 'straight', 'step', 'smoothstep', 'bezier', 'simplebezier']);
 
 export default function GraphCanvas() {
-  const {
-    activeCaseId,
-    getEntitiesForCase,
-    getRelationshipsForCase,
-    selectedEntityId,
-    setSelectedEntity,
-    setSelectedRelationship,
-    highlightedPath,
-    graphSearchQuery,
-    typeFilters,
-    pinnedNodeIds,
-    graphSettings,
-    appearance,
-    addRelationship,
-    updateEntityPosition,
-    pushHistory,
-  } = useStore();
+  const activeCaseId = useStore((s) => s.activeCaseId);
+  const selectedEntityId = useStore((s) => s.selectedEntityId);
+  const setSelectedEntity = useStore((s) => s.setSelectedEntity);
+  const setSelectedRelationship = useStore((s) => s.setSelectedRelationship);
+  const highlightedPath = useStore((s) => s.highlightedPath);
+  const graphSearchQuery = useStore((s) => s.graphSearchQuery);
+  const typeFilters = useStore((s) => s.typeFilters);
+  const pinnedNodeIds = useStore((s) => s.pinnedNodeIds);
+  const graphSettings = useStore((s) => s.graphSettings);
+  const appearance = useStore((s) => s.appearance);
+  const addRelationship = useStore((s) => s.addRelationship);
+  const updateEntityPosition = useStore((s) => s.updateEntityPosition);
+  const pushHistory = useStore((s) => s.pushHistory);
 
-  const entities = activeCaseId ? getEntitiesForCase(activeCaseId) : [];
-  const relationships = activeCaseId ? getRelationshipsForCase(activeCaseId) : [];
+  // Select raw store arrays (stable references until store mutates)
+  const allEntities = useStore((s) => s.entities);
+  const allRelationships = useStore((s) => s.relationships);
+
+  const entities = useMemo(
+    () => (activeCaseId ? allEntities.filter((e) => e.caseId === activeCaseId) : []),
+    [allEntities, activeCaseId]
+  );
+  const relationships = useMemo(
+    () => (activeCaseId ? allRelationships.filter((r) => r.caseId === activeCaseId) : []),
+    [allRelationships, activeCaseId]
+  );
 
   const filteredEntities = useMemo(() => {
     let list = entities;
@@ -60,9 +65,52 @@ export default function GraphCanvas() {
     return list;
   }, [entities, typeFilters, graphSearchQuery]);
 
-  const filteredIds = useMemo(() => new Set(filteredEntities.map((e) => e.id)), [filteredEntities]);
+  const filteredIdKey = useMemo(
+    () => filteredEntities.map((e) => e.id).sort().join(','),
+    [filteredEntities]
+  );
+  const filteredIds = useMemo(() => new Set(filteredIdKey ? filteredIdKey.split(',') : []), [filteredIdKey]);
 
-  const buildNodes = useCallback((): Node[] => {
+  const edgeType = useMemo(() => {
+    const t = graphSettings.edgeStyle || 'smoothstep';
+    return VALID_EDGE_TYPES.has(t) ? t : 'smoothstep';
+  }, [graphSettings.edgeStyle]);
+
+  const pathKey = useMemo(() => (highlightedPath || []).join(','), [highlightedPath]);
+  const pinKey = useMemo(() => (pinnedNodeIds || []).join(','), [pinnedNodeIds]);
+
+  const styleKey = useMemo(
+    () =>
+      [
+        pathKey,
+        edgeType,
+        graphSettings.edgeVariant,
+        graphSettings.edgeThickness,
+        graphSettings.showLabels ? '1' : '0',
+        appearance.accentColor,
+        appearance.edgeColor,
+      ].join('|'),
+    [
+      pathKey,
+      edgeType,
+      graphSettings.edgeVariant,
+      graphSettings.edgeThickness,
+      graphSettings.showLabels,
+      appearance.accentColor,
+      appearance.edgeColor,
+    ]
+  );
+
+  const structureKey = useMemo(() => {
+    const rids = relationships
+      .filter((r) => filteredIds.has(r.sourceId) && filteredIds.has(r.targetId))
+      .map((r) => r.id)
+      .sort()
+      .join(',');
+    return `${activeCaseId}|${filteredIdKey}|${rids}`;
+  }, [activeCaseId, filteredIdKey, relationships, filteredIds]);
+
+  const makeNodes = useCallback((): Node[] => {
     return filteredEntities.map((e, i) => ({
       id: String(e.id),
       type: 'entity',
@@ -81,12 +129,7 @@ export default function GraphCanvas() {
     }));
   }, [filteredEntities, selectedEntityId, highlightedPath, pinnedNodeIds]);
 
-  const edgeType = useMemo(() => {
-    const t = graphSettings.edgeStyle || 'smoothstep';
-    return VALID_EDGE_TYPES.has(t) ? t : 'smoothstep';
-  }, [graphSettings.edgeStyle]);
-
-  const buildEdges = useCallback((): Edge[] => {
+  const makeEdges = useCallback((): Edge[] => {
     const accent = appearance.accentColor || '#8b5cf6';
     const stroke = appearance.edgeColor || '#64748b';
     const variant = graphSettings.edgeVariant || 'solid';
@@ -135,31 +178,40 @@ export default function GraphCanvas() {
   const [nodes, setNodes, onNodesChangeBase] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  const structureKey = useMemo(() => {
-    const eids = filteredEntities.map((e) => e.id).sort().join(',');
-    const rids = relationships
-      .filter((r) => filteredIds.has(r.sourceId) && filteredIds.has(r.targetId))
-      .map((r) => r.id)
-      .sort()
-      .join(',');
-    return `${activeCaseId}|${eids}|${rids}|${(typeFilters || []).join(',')}|${graphSearchQuery || ''}`;
-  }, [activeCaseId, filteredEntities, relationships, filteredIds, typeFilters, graphSearchQuery]);
-
   const prevStructure = useRef('');
+  const prevStyle = useRef('');
+  const prevSelection = useRef('');
+
+  // Rebuild graph only when structure changes (nodes/edges added or removed)
   useEffect(() => {
     if (prevStructure.current === structureKey) return;
     prevStructure.current = structureKey;
+    prevStyle.current = styleKey;
+    prevSelection.current = `${selectedEntityId}|${pathKey}|${pinKey}`;
+
     setNodes((current) => {
       const posMap = Object.fromEntries(current.map((n) => [n.id, n.position]));
-      return buildNodes().map((n) => ({
+      return makeNodes().map((n) => ({
         ...n,
         position: posMap[n.id] || n.position,
       }));
     });
-    setEdges(buildEdges());
-  }, [structureKey, buildNodes, buildEdges, setNodes, setEdges]);
+    setEdges(makeEdges());
+  }, [structureKey, styleKey, selectedEntityId, pathKey, pinKey, makeNodes, makeEdges, setNodes, setEdges]);
 
+  // Update edge styles without rebuilding structure
   useEffect(() => {
+    if (prevStructure.current !== structureKey) return; // structure effect owns first paint
+    if (prevStyle.current === styleKey) return;
+    prevStyle.current = styleKey;
+    setEdges(makeEdges());
+  }, [styleKey, structureKey, makeEdges, setEdges]);
+
+  // Selection / highlight / pin — nodes only, no edge churn
+  useEffect(() => {
+    const key = `${selectedEntityId}|${pathKey}|${pinKey}`;
+    if (prevSelection.current === key) return;
+    prevSelection.current = key;
     setNodes((nds) =>
       nds.map((n) => ({
         ...n,
@@ -172,21 +224,7 @@ export default function GraphCanvas() {
         draggable: !(pinnedNodeIds || []).includes(n.id),
       }))
     );
-  }, [selectedEntityId, highlightedPath, pinnedNodeIds, setNodes]);
-
-  useEffect(() => {
-    setEdges(buildEdges());
-  }, [
-    highlightedPath,
-    graphSettings.edgeStyle,
-    graphSettings.edgeVariant,
-    graphSettings.edgeThickness,
-    graphSettings.showLabels,
-    appearance.edgeColor,
-    appearance.accentColor,
-    buildEdges,
-    setEdges,
-  ]);
+  }, [selectedEntityId, pathKey, pinKey, highlightedPath, pinnedNodeIds, setNodes]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -236,7 +274,7 @@ export default function GraphCanvas() {
         )
       );
     },
-    [activeCaseId, addRelationship, setEdges, graphSettings, appearance.edgeColor, edgeType]
+    [activeCaseId, addRelationship, setEdges, graphSettings.edgeVariant, appearance.edgeColor, edgeType]
   );
 
   const onNodeClick = useCallback(
