@@ -6,71 +6,67 @@ Interactive investigation graph for cyber and OSINT analysis.
 **Telegram:** [@sofia_white_death](https://t.me/sofia_white_death)  
 **Channel:** [t.me/argus_platform](https://t.me/argus_platform)
 
-Argus links infrastructure and identity entities on a visual graph: domains, IPs, certificates, people, emails, phones, organizations, and related types. Cases are stored locally in the browser. A terminal shell supports search workflows alongside the web UI.
-
-## Features
-
-- **Investigation graph** — React Flow canvas with multi-side connection handles, edge styles and variants
-- **Cases** — create, rename, clear, and delete investigation cases
-- **Entities and relationships** — typed model with confidence and source metadata
-- **Undo / redo** — snapshot history for structural graph changes and node moves
-- **Search panel** — DNS lookup via Cloudflare DoH, links to external OSINT tools
-- **Email / phone validation** — format checks, disposable-domain hints, optional MX lookup
-- **Maltego-oriented export** — GraphML and CSV interchange helpers
-- **Settings** — theme, language (15 locales), graph colors, focus mode, layout presets
-- **CLI** — `npm run argus`: open browser, console search, or language selection
-- **Local persistence** — case snapshots in `localStorage`
-
-## Stack
-
-- React 19 + TypeScript · Vite 6 · Zustand · React Flow (`@xyflow/react`) · Node.js CLI
+Cases, entities, and relationships stay in the browser (`localStorage`). No backend is required for core use.
 
 ## Requirements
 
-- **Node.js 20+** (LTS recommended)
-- npm 10+
+- Windows 10/11, macOS, or Linux
+- **Node.js 20+** (LTS) with npm — https://nodejs.org/
 
-## Install & run
+## Quick start (Windows)
+
+1. Download and unpack the repository.
+2. Double-click **`START_ARGUS.bat`** in the project root.
+3. Choose **1** (Web UI).
+4. Open the URL printed in the terminal (usually `http://127.0.0.1:3030`).
+
+First run installs npm dependencies automatically.
+
+Optional: `INSTALL_ARGUS.bat`, `RUN_DEV.bat`.
+
+## Terminal
+
+`package.json` is in **`frontend/`**.
 
 ```bash
-# 1. Clone or download ZIP and unpack
-cd ARGUS-main/frontend   # or ARGUS/frontend
-
+cd frontend
 npm install
 npm run dev
 ```
 
-Open the URL printed by Vite, usually:
-
-- **http://127.0.0.1:3030**
-
-If port 3030 is busy, Vite will pick the next free port — **read the terminal output**.
-
-### CLI menu
+From repository root (proxy scripts):
 
 ```bash
-cd frontend
-npm run argus
+npm run install:app
+npm run dev
 ```
 
-Windows: double-click `START_ARGUS.bat` in the repository root.
+### Fix for ENOENT package.json on Windows
 
-### If the page is blank
+```bat
+cd /d "C:\path\to\ARGUS-main\frontend"
+npm run dev
+```
 
-1. Open the browser **DevTools → Console** (F12) and send any red error text.
-2. Confirm you are in the **`frontend`** folder (where `package.json` is) before `npm install` / `npm run dev`.
-3. Try another port: `npx vite --port 5173 --host 127.0.0.1`
-4. Hard refresh: Ctrl+Shift+R
+Or use `START_ARGUS.bat` (`cd /d "%~dp0"` + enter `frontend`).
 
-## Configuration
+## Port
 
-`frontend/argus.config.json` — `port` (default 3030), language, theme.  
-Optional Shodan API key: Settings panel → stored only in browser `localStorage`.
+Default **3030**. If busy, Vite chooses the next free port — use the `Local:` line from the terminal.
+
+## Features
+
+- Investigation graph (React Flow)
+- Cases with isolation
+- Search + DNS lookups + OSINT links
+- Timeline, settings, export helpers
+- Integrity check (Settings → Validate active case)
+- CLI menu / console search
+
+## Privacy
+
+Local `localStorage` only. No telemetry. Do not commit API keys.
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
----
-
-© ARGUS · author **sellmetadone** · Telegram [@sofia_white_death](https://t.me/sofia_white_death) · [argus_platform](https://t.me/argus_platform)
