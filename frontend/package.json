@@ -3,28 +3,28 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Argus — interactive cyber investigation graph for OSINT link analysis",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "typecheck": "tsc -p tsconfig.app.json --noEmit",
+    "lint": "oxlint",
     "preview": "vite preview",
     "argus": "node argus-cli.mjs",
     "cli": "node argus-cli.mjs cli",
     "start": "node argus-cli.mjs",
     "config": "node argus-cli.mjs config",
     "search": "node argus-cli.mjs search",
-    "both": "node argus-cli.mjs both"
+    "both": "node argus-cli.mjs both",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit"
   },
   "dependencies": {
     "@xyflow/react": "^12.4.4",
-    "chalk": "^5.4.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.475.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "zustand": "^5.0.3"
+    "zustand": "^5.0.3",
+    "chalk": "^5.4.1"
   },
   "devDependencies": {
     "@types/node": "^22.13.4",
@@ -36,5 +36,6 @@
   },
   "bin": {
     "argus": "./argus-cli.mjs"
-  }
+  },
+  "description": "Argus — interactive cyber investigation graph for OSINT link analysis"
 }
