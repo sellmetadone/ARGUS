@@ -1,0 +1,17 @@
+{
+  "port": 3030,
+  "host": "argus.local",
+  "openBrowser": true,
+  "lang": "en",
+  "color": true,
+  "ascii": true,
+  "clearScreen": true,
+  "prompt": "argus>",
+  "defaultMode": "menu",
+  "theme": "magenta",
+  "shodanApiKey": "",
+  "autoInstall": true,
+  "rainbow": true,
+  "rainbowFps": 24,
+  "fallbackHost": "127.0.0.1"
+}
