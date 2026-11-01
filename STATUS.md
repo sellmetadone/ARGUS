@@ -1,51 +1,38 @@
 # ARGUS — implementation status
 
-Honest snapshot for contributors and testers.
-
 ## Status: PARTIALLY READY
 
 Core investigation UI and graph work on desktop. Not a finished CanvasEngine/whiteboard product.
 
+### Maintenance (2026-11-02)
+
+- Audited architecture: frontend-only (Vite + React 19 + Zustand + React Flow); no separate backend service
+- BAT launchers (`START_ARGUS.bat`, `RUN_DEV.bat`) use `cd /d` and `frontend/package.json`
+- **Fixed:** persisted cases were written via `caseRepository` but not reloaded on app start → `bootstrap.ts` + App hydrate
+- **Fixed:** correlation batch link creation used stale relationship list mid-loop
+- **Fixed:** relationship type from correlation sanitized against `RelationshipType`
+- Dependencies not force-upgraded (React 19 / Vite 6 stack left as declared)
+- Full `tsc`/production build not verified in CI sandbox this pass — run locally: `cd frontend && npm run typecheck && npm run build`
+
 ## Done
 
-- Windows-oriented launch path (`frontend/package.json`, Vite)
-- React Flow graph, provider, loop fixes
-- Cases, entities, relationships, basic persist
-- Double-click entity create + type picker
-- Connection editor + store update/remove
-- Entity schemas + Object Inspector
-- Graph analytics services + panel (themed + i18n)
-- Evidence / correlation / optional local AI panels (themed + i18n)
-- Welcome screen localized + theme-aware
-- en/ru strings for main chrome, settings, inspector, connections, analytics, evidence, AI, correlation
-- Desktop/laptop device profile
-- README + this STATUS file
-- CanvasEngine **scaffold** (`canvas/engine/types.ts`, `CanvasEngine.ts`) — not full whiteboard yet
+- Graph + tools, Inspector, Connection editor, schemas
+- Analytics, Evidence, Correlation (create suspected links), optional local AI
+- Temporal graph filter (Timeline)
+- CanvasEngine mirror (viewport/tool/entities)
+- en/ru i18n for main panels
+- Case persist + **restore** from localStorage
 
-## Partial
+## Known gaps
 
-- Bidirectional edge markers / all line styles in every edge state
-- Temporal intelligence (deep time filters on graph)
-- Correlation → one-click create relationship
-- CanvasEngine wired as single renderer (still React Flow primary)
-- Timeline / Search / Command palette / Tutorial full i18n
+- Map placeholder
+- Full CanvasEngine whiteboard (layers/groups/frames)
+- Complete i18n for all LANG_META languages
+- E2E on Windows CI
+- Hydrate runs after first paint (brief demo flash possible if localStorage has data)
 
-## Not done
-
-- Full Whiteboard redesign (layers UI, frames, groups, multi-select align)
-- Map (Leaflet/MapLibre)
-- Custom entity type builder UI
-- Complete translations for all languages in LANG_META
-- Automated E2E on Windows CI
-
-## How to verify
+## Verify
 
 ```bash
-cd frontend && npm install && npm run dev
+cd frontend && npm install && npm run typecheck && npm run build && npm run dev
 ```
-
-1. Welcome → New canvas / language in Settings  
-2. Create entity / link / Inspector / Connection editor  
-3. Analytics → find path  
-4. Evidence / Correlate / AI (optional Ollama)  
-5. Reload page → case still present  

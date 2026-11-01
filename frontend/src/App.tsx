@@ -20,6 +20,7 @@ import { Map, Clock, Search, Settings, Undo2, Redo2, Download, Workflow, Network
 import { useT } from './i18n/useT';
 import { LANG_META, type LangCode } from './i18n/locales';
 import { useDeviceProfile } from './hooks/useDeviceProfile';
+import { bootstrapAppState } from './core/storage/bootstrap';
 
 export default function App() {
   const t = useT();
@@ -28,6 +29,25 @@ export default function App() {
     panels, togglePanel, activeCaseId, cases, appearance, graphSearchQuery, setGraphSearchQuery,
     undo, redo, exportGraph, setCommandPaletteOpen, graphSettings, showWelcome, setShowWelcome,
   } = useStore();
+
+  const hydrated = useRef(false);
+  useEffect(() => {
+    if (hydrated.current) return;
+    hydrated.current = true;
+    const boot = bootstrapAppState();
+    if (boot.source === 'localStorage' && boot.cases.length) {
+      useStore.setState({
+        cases: boot.cases,
+        entities: boot.entities,
+        relationships: boot.relationships,
+        timeline: boot.timeline,
+        activeCaseId: boot.activeCaseId,
+        selectedEntityId: null,
+        selectedRelationshipId: null,
+        highlightedPath: [],
+      });
+    }
+  }, []);
 
   const activeCase = cases.find((c) => c.id === activeCaseId);
   const [themeFlash, setThemeFlash] = useState(false);
@@ -42,7 +62,6 @@ export default function App() {
     if (appearance.graphDots) root.style.setProperty('--graph-dots', appearance.graphDots);
     if (appearance.edgeColor) root.style.setProperty('--edge', appearance.edgeColor);
     root.style.fontFamily = appearance.fontFamily;
-    // Prefer CSS density over body zoom (zoom breaks desktop layout / hit targets)
     if (document.body.style.zoom) document.body.style.zoom = '';
     const lang = (appearance.language || 'ru') as LangCode;
     document.documentElement.lang = lang;
