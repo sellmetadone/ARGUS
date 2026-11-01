@@ -39,6 +39,7 @@ export default function GraphCanvas() {
 
   const activeCaseId = useStore((s) => s.activeCaseId);
   const selectedEntityId = useStore((s) => s.selectedEntityId);
+  const selectedRelationshipId = useStore((s) => s.selectedRelationshipId);
   const setSelectedEntity = useStore((s) => s.setSelectedEntity);
   const setSelectedRelationship = useStore((s) => s.setSelectedRelationship);
   const highlightedPath = useStore((s) => s.highlightedPath);
@@ -50,6 +51,8 @@ export default function GraphCanvas() {
   const addRelationship = useStore((s) => s.addRelationship);
   const updateEntityPosition = useStore((s) => s.updateEntityPosition);
   const pushHistory = useStore((s) => s.pushHistory);
+  const removeEntity = useStore((s) => s.removeEntity);
+  const removeRelationship = useStore((s) => s.removeRelationship);
   const canvasTool = useStore((s) => s.canvasTool);
   const allEntities = useStore((s) => s.entities);
   const allRelationships = useStore((s) => s.relationships);
@@ -290,6 +293,59 @@ export default function GraphCanvas() {
     [onNodesChangeBase, updateEntityPosition, pushHistory]
   );
 
+  const onNodesDelete = useCallback(
+    (deleted: Node[]) => {
+      for (const n of deleted) {
+        if ((pinnedNodeIds || []).includes(n.id)) continue;
+        removeEntity(n.id);
+        canvasEngine.removeByEntityId(n.id);
+      }
+      setSelectedEntity(null);
+    },
+    [removeEntity, pinnedNodeIds, setSelectedEntity]
+  );
+
+  const onEdgesDelete = useCallback(
+    (deleted: Edge[]) => {
+      for (const e of deleted) removeRelationship(e.id);
+      setSelectedRelationship(null);
+    },
+    [removeRelationship, setSelectedRelationship]
+  );
+
+  // Keyboard Delete / Backspace
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      const tag = (ev.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (ev.target as HTMLElement)?.isContentEditable) return;
+      if (ev.key !== 'Delete' && ev.key !== 'Backspace') return;
+      if (selectedEntityId) {
+        if ((pinnedNodeIds || []).includes(selectedEntityId)) return;
+        ev.preventDefault();
+        setSelectedEntity(null);
+        setSelectedRelationship(null);
+        removeEntity(selectedEntityId);
+        canvasEngine.removeByEntityId(selectedEntityId);
+        return;
+      }
+      if (selectedRelationshipId) {
+        ev.preventDefault();
+        setSelectedRelationship(null);
+        removeRelationship(selectedRelationshipId);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [
+    selectedEntityId,
+    selectedRelationshipId,
+    pinnedNodeIds,
+    removeEntity,
+    removeRelationship,
+    setSelectedEntity,
+    setSelectedRelationship,
+  ]);
+
   const onViewportChange: OnViewportChange = useCallback((vp) => {
     canvasEngine.setViewport({ x: vp.x, y: vp.y, zoom: vp.zoom });
   }, []);
@@ -297,6 +353,7 @@ export default function GraphCanvas() {
   const onConnect = useCallback(
     (params: Connection) => {
       if (!params.source || !params.target || !activeCaseId) return;
+      if (params.source === params.target) return;
       const id = `rel-${Date.now()}`;
       addRelationship({
         id,
@@ -429,6 +486,8 @@ export default function GraphCanvas() {
         edges={displayEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodesDelete={onNodesDelete}
+        onEdgesDelete={onEdgesDelete}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
@@ -447,6 +506,7 @@ export default function GraphCanvas() {
         selectionOnDrag={canvasTool === 'select'}
         nodesDraggable={canvasTool !== 'hand'}
         nodesConnectable={canvasTool === 'connect' || canvasTool === 'select'}
+        deleteKeyCode={null}
         snapToGrid={!!graphSettings.snapToGrid}
         snapGrid={[graphSettings.gridSize || 20, graphSettings.gridSize || 20]}
         onlyRenderVisibleElements={device.onlyRenderVisible}
