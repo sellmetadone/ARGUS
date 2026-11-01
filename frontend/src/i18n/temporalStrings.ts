@@ -1,4 +1,4 @@
-/** Temporal filter i18n — merged by consumers via useT fallback or spread into locales. */
+/** Extra i18n packs merged via useT */
 export const TEMPORAL_EN: Record<string, string> = {
   temporal_filter_graph: 'Filter graph',
   temporal_from: 'From',
@@ -7,6 +7,10 @@ export const TEMPORAL_EN: Record<string, string> = {
   temporal_active: 'Graph filter on',
   temporal_overlaps: 'overlap(s) — not causation',
   temporal_no_events: 'No events in range',
+  corr_create_links: 'Create suspected links',
+  corr_link_hint: 'Adds dashed bidirectional edges with status=suspected. Not proof.',
+  corr_link_created: 'Suspected link created',
+  corr_already_linked: 'Already linked',
 };
 
 export const TEMPORAL_RU: Record<string, string> = {
@@ -17,4 +21,8 @@ export const TEMPORAL_RU: Record<string, string> = {
   temporal_active: 'Фильтр графа вкл.',
   temporal_overlaps: 'пересеч. — не причинность',
   temporal_no_events: 'Нет событий в диапазоне',
+  corr_create_links: 'Создать предполагаемые связи',
+  corr_link_hint: 'Добавляет пунктирные двусторонние рёбра status=suspected. Не доказательство.',
+  corr_link_created: 'Предполагаемая связь создана',
+  corr_already_linked: 'Уже связано',
 };
