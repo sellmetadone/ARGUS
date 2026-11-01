@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  typecheck-build:
+    name: Typecheck & build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [20]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install
+        run: npm ci --no-fund --no-audit || npm install --no-fund --no-audit
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Production build
+        run: npm run build
+      - name: Upload dist
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: argus-dist
+          path: frontend/dist
+          retention-days: 7
+
+  e2e:
+    name: E2E smoke (Windows)
+    runs-on: windows-latest
+    needs: typecheck-build
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install
+        run: npm ci --no-fund --no-audit || npm install --no-fund --no-audit
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+      - name: Build
+        run: npm run build
+      - name: E2E smoke
+        run: npm run test:e2e
+        env:
+          CI: true
