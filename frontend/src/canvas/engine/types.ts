@@ -1,7 +1,6 @@
 /**
- * CanvasEngine types — foundation for unified canvas state.
- * GraphCanvas still drives React Flow; this module defines the target API surface.
- * Does not replace case entity/relationship storage.
+ * CanvasEngine types — unified canvas state surface.
+ * Case data remains in Zustand; engine mirrors layout/selection/viewport for tools.
  */
 
 export type CanvasTool = 'select' | 'hand' | 'node' | 'connect' | 'note' | 'text';
@@ -25,7 +24,6 @@ export type CanvasObjectKind = 'entity' | 'note' | 'text' | 'frame' | 'group';
 export type CanvasObject = {
   id: string;
   kind: CanvasObjectKind;
-  /** Links to Entity.id when kind === 'entity' */
   entityId?: string;
   layerId: string;
   x: number;
@@ -37,11 +35,14 @@ export type CanvasObject = {
 };
 
 export type CanvasEngineState = {
+  caseId: string | null;
   viewport: CanvasViewport;
   tool: CanvasTool;
   layers: CanvasLayer[];
   objects: CanvasObject[];
   selectedIds: string[];
+  /** entity ids currently mirrored */
+  entityCount: number;
 };
 
 export const DEFAULT_LAYER: CanvasLayer = {
@@ -52,12 +53,14 @@ export const DEFAULT_LAYER: CanvasLayer = {
   order: 0,
 };
 
-export function createInitialCanvasState(): CanvasEngineState {
+export function createInitialCanvasState(caseId: string | null = null): CanvasEngineState {
   return {
+    caseId,
     viewport: { x: 0, y: 0, zoom: 1 },
     tool: 'select',
     layers: [{ ...DEFAULT_LAYER }],
     objects: [],
     selectedIds: [],
+    entityCount: 0,
   };
 }
