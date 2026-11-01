@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import Sidebar from './components/layout/Sidebar';
 import GraphCanvas from './components/graph/GraphCanvas';
 import Graph3D from './components/graph/Graph3D';
-import EntityPanel from './components/entities/EntityPanel';
+import ObjectInspector from './components/inspector/ObjectInspector';
 import Timeline from './components/timeline/Timeline';
 import SettingsPanel from './components/settings/SettingsPanel';
 import SearchPanel from './components/search/SearchPanel';
@@ -87,7 +87,7 @@ export default function App() {
           <ToolbarBtn active={panels.correlation} onClick={() => togglePanel('correlation')} icon={<GitCompare size={15} />} label={t('correlate')} />
           <ToolbarBtn active={panels.ai} onClick={() => togglePanel('ai')} icon={<Bot size={15} />} label="AI" />
           <ToolbarBtn active={panels.settings} onClick={() => togglePanel('settings')} icon={<Settings size={15} />} label={t('settings')} />
-          <button type="button" className="btn btn-ghost" onClick={() => setShowWelcome(true)} style={{ marginLeft: 4, fontSize: 11 }}>Home</button>
+          <button type="button" className="btn btn-ghost" onClick={() => setShowWelcome(true)} style={{ marginLeft: 4, fontSize: 11 }}>{t('home')}</button>
           <button type="button" className="btn btn-ghost" onClick={() => setCommandPaletteOpen(true)} style={{ fontSize: 11 }}>Ctrl+K</button>
         </div>
       </header>
@@ -103,15 +103,15 @@ export default function App() {
               <div style={{ position: 'absolute', inset: 0, background: 'var(--panel)', opacity: 0.95, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
                 <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
                   <Map size={40} style={{ marginBottom: 12, opacity: 0.5 }} />
-                  <div style={{ fontSize: 14 }}>Geospatial map</div>
-                  <div style={{ fontSize: 12, marginTop: 4 }}>Leaflet / MapLibre — planned</div>
+                  <div style={{ fontSize: 14 }}>{t('map_title')}</div>
+                  <div style={{ fontSize: 12, marginTop: 4 }}>{t('map_planned')}</div>
                 </div>
               </div>
             )}
           </div>
           {panels.timeline && <Timeline />}
         </div>
-        {panels.rightPanel && <EntityPanel />}
+        {panels.rightPanel && <ObjectInspector />}
         {panels.settings && <SettingsPanel />}
         {panels.maltego && <MaltegoPanel />}
         {panels.tutorial && <TutorialPanel />}
