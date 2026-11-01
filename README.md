@@ -6,7 +6,7 @@ Interactive investigation graph for cyber and OSINT analysis.
 **Telegram:** [@sofia_white_death](https://t.me/sofia_white_death)  
 **Channel:** [t.me/argus_platform](https://t.me/argus_platform)
 
-Cases, entities, and relationships stay in the browser (`localStorage`). No backend is required for core use.
+Cases, entities, and relationships stay in the browser (`localStorage`). No backend is required for core use. Optional **Ollama** for local AI only.
 
 ## Requirements
 
@@ -15,57 +15,61 @@ Cases, entities, and relationships stay in the browser (`localStorage`). No back
 
 ## Quick start (Windows)
 
-1. Download and unpack the repository.
-2. Double-click **`START_ARGUS.bat`** in the project root.
-3. Choose **1** (Web UI).
-4. Open the URL printed in the terminal (usually `http://127.0.0.1:3030`).
+1. Clone or download the repository.
+2. Double-click **`START_ARGUS.bat`** in the project root (if present), **or**:
 
-First run installs npm dependencies automatically.
+```bat
+cd /d "C:\path\to\ARGUS\frontend"
+npm install
+npm run dev
+```
 
-Optional: `INSTALL_ARGUS.bat`, `RUN_DEV.bat`.
+3. Open the URL from the terminal (usually `http://127.0.0.1:3030`).
 
-## Terminal
+### Fix: `ENOENT package.json`
 
-`package.json` is in **`frontend/`**.
+Always work in **`frontend/`** (that is where `package.json` lives), or use a root BAT with `cd /d "%~dp0frontend"`.
+
+```bat
+cd /d "C:\path\to\ARGUS\frontend"
+npm run dev
+```
+
+### Port
+
+Default **3030**. If busy, Vite picks the next free port — use the `Local:` line.
+
+## From repository root
 
 ```bash
 cd frontend
 npm install
 npm run dev
+npm run build
+npm run preview
 ```
 
-From repository root (proxy scripts):
+## Features (current)
 
-```bash
-npm run install:app
-npm run dev
-```
-
-### Fix for ENOENT package.json on Windows
-
-```bat
-cd /d "C:\path\to\ARGUS-main\frontend"
-npm run dev
-```
-
-Or use `START_ARGUS.bat` (`cd /d "%~dp0"` + enter `frontend`).
-
-## Port
-
-Default **3030**. If busy, Vite chooses the next free port — use the `Local:` line from the terminal.
-
-## Features
-
-- Investigation graph (React Flow)
-- Cases with isolation
-- Search + DNS lookups + OSINT links
-- Timeline, settings, export helpers
-- Integrity check (Settings → Validate active case)
-- CLI menu / console search
+- Investigation graph (React Flow) with tools: select, pan, connect, double-click create
+- Cases isolation + local persist
+- **Object Inspector** (overview / schema data / sources / links / history)
+- **Connection editor** (type, evidence status, confidence, direction, line style)
+- **Entity schemas** by type (person, domain, IP, …)
+- Graph analytics: metrics, shortest path, degree, centrality, components, isolates
+- Evidence manager (local, verification statuses)
+- Correlation helper, optional **local Ollama** AI (off by default)
+- Timeline panel, search, settings (theme / language / integrity)
+- Desktop-first device profile (laptop / desktop density)
+- i18n: Russian + English primary
 
 ## Privacy
 
-Local `localStorage` only. No telemetry. Do not commit API keys.
+Local `localStorage` only for cases. No telemetry. Do not commit API keys. AI never runs without explicit consent and local Ollama.
+
+## Status
+
+See **[STATUS.md](STATUS.md)** for completed vs backlog (CanvasEngine, full whiteboard, map, etc.).
 
 ## License
 
