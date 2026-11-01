@@ -3,6 +3,8 @@ import { useStore } from '../../store/useStore';
 import { ENTITY_COLORS, RELATIONSHIP_LABELS } from '../../types';
 import ConnectionEditor from '../connections/ConnectionEditor';
 import { useT } from '../../i18n/useT';
+import { getSchema, type SchemaField } from '../../entities/entitySchemas';
+import { labelFromProperties } from '../../entities/entityFactory';
 
 export default function EntityPanel() {
   const t = useT();
@@ -23,18 +25,31 @@ export default function EntityPanel() {
   const entity = entities.find((e) => e.id === selectedEntityId);
   const rel = relationships.find((r) => r.id === selectedRelationshipId);
 
-  // Full connection editor when a relationship is selected
-  if (rel && !entity) {
-    return <ConnectionEditor />;
-  }
-
+  if (rel && !entity) return <ConnectionEditor />;
   if (!entity && !rel) return null;
+
+  const schema = entity ? getSchema(entity.type) : null;
+
+  const setField = (field: SchemaField, raw: string) => {
+    if (!entity) return;
+    const nextProps = { ...entity.properties, [field.key]: raw };
+    const patch: Parameters<typeof updateEntity>[1] = { properties: nextProps };
+    if (field.isLabel) {
+      patch.label = labelFromProperties(entity.type, nextProps, entity.label);
+    }
+    updateEntity(entity.id, patch);
+  };
+
+  const fieldValue = (key: string) => {
+    const v = entity?.properties?.[key];
+    return v == null ? '' : String(v);
+  };
 
   return (
     <div
       className="argus-panel"
       style={{
-        width: 320,
+        width: 340,
         background: 'var(--panel)',
         borderLeft: '1px solid var(--border)',
         height: '100%',
@@ -69,7 +84,7 @@ export default function EntityPanel() {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
-        {entity && (
+        {entity && schema && (
           <>
             <div
               style={{
@@ -80,8 +95,9 @@ export default function EntityPanel() {
                 marginBottom: 6,
               }}
             >
-              {entity.type}
+              {t(schema.labelKey)}
             </div>
+
             <input
               value={entity.label}
               onChange={(e) => updateEntity(entity.id, { label: e.target.value })}
@@ -95,55 +111,81 @@ export default function EntityPanel() {
                 background: 'var(--bg)',
                 border: '1px solid var(--border)',
                 borderRadius: 6,
+                boxSizing: 'border-box',
               }}
             />
-            {entity.source && (
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-                Source: {entity.source}
-              </div>
-            )}
-            {entity.confidence != null && (
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-                Confidence: {entity.confidence}%
-              </div>
-            )}
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginTop: 16, marginBottom: 8 }}>
+
+            <label style={lbl}>{t('rel_confidence')} · {entity.confidence ?? 50}%</label>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={entity.confidence ?? 50}
+              onChange={(e) => updateEntity(entity.id, { confidence: Number(e.target.value) })}
+              style={{ width: '100%', marginBottom: 12 }}
+            />
+
+            <label style={lbl}>{t('rel_source')}</label>
+            <input
+              value={entity.source || ''}
+              onChange={(e) => updateEntity(entity.id, { source: e.target.value })}
+              style={inp}
+              placeholder={t('rel_source_ph')}
+            />
+
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', margin: '12px 0 8px' }}>
               {t('properties').toUpperCase()}
             </div>
-            {Object.entries(entity.properties || {}).map(([k, v]) => (
-              <div
-                key={k}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: 12,
-                  padding: '4px 0',
-                  borderBottom: '1px solid var(--border)',
-                }}
-              >
-                <span style={{ color: 'var(--text-muted)' }}>{k}</span>
-                <span className="mono" style={{ color: 'var(--text)' }}>
-                  {String(v)}
-                </span>
+
+            {schema.fields.map((field) => (
+              <div key={field.key} style={{ marginBottom: 10 }}>
+                <label style={lbl}>{t(field.labelKey)}</label>
+                {field.kind === 'textarea' ? (
+                  <textarea
+                    value={fieldValue(field.key)}
+                    onChange={(e) => setField(field, e.target.value)}
+                    rows={3}
+                    style={{ ...inp, resize: 'vertical' }}
+                  />
+                ) : (
+                  <input
+                    type={field.kind === 'number' ? 'number' : field.kind === 'date' ? 'date' : field.kind === 'email' ? 'email' : field.kind === 'url' ? 'url' : 'text'}
+                    value={fieldValue(field.key)}
+                    onChange={(e) => setField(field, e.target.value)}
+                    className={field.kind === 'mono' ? 'mono' : undefined}
+                    style={inp}
+                  />
+                )}
               </div>
             ))}
+
+            {/* Extra keys not in schema (imported data) */}
+            {Object.keys(entity.properties || {})
+              .filter((k) => !schema.fields.some((f) => f.key === k))
+              .map((k) => (
+                <div key={k} style={{ marginBottom: 8 }}>
+                  <label style={lbl}>{k}</label>
+                  <input
+                    value={fieldValue(k)}
+                    onChange={(e) =>
+                      updateEntity(entity.id, {
+                        properties: { ...entity.properties, [k]: e.target.value },
+                      })
+                    }
+                    style={inp}
+                    className="mono"
+                  />
+                </div>
+              ))}
+
+            <label style={lbl}>{t('field_notes')}</label>
             <textarea
               value={entity.notes || ''}
               onChange={(e) => updateEntity(entity.id, { notes: e.target.value })}
-              placeholder="Notes…"
-              style={{
-                width: '100%',
-                marginTop: 16,
-                minHeight: 80,
-                padding: 8,
-                background: 'var(--bg)',
-                border: '1px solid var(--border)',
-                borderRadius: 6,
-                color: 'var(--text)',
-                fontSize: 12,
-                resize: 'vertical',
-              }}
+              rows={3}
+              style={{ ...inp, resize: 'vertical' }}
             />
+
             <div style={{ marginTop: 16 }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>
                 {t('relations').toUpperCase()}
@@ -165,6 +207,7 @@ export default function EntityPanel() {
                   </button>
                 ))}
             </div>
+
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button type="button" className="btn btn-secondary" onClick={() => togglePinNode(entity.id)}>
                 <Pin size={14} /> {pinnedNodeIds.includes(entity.id) ? 'Pinned' : 'Pin'}
@@ -185,3 +228,22 @@ export default function EntityPanel() {
     </div>
   );
 }
+
+const lbl: React.CSSProperties = {
+  display: 'block',
+  fontSize: 11,
+  fontWeight: 600,
+  color: 'var(--text-muted)',
+  marginBottom: 4,
+};
+
+const inp: React.CSSProperties = {
+  width: '100%',
+  padding: '7px 10px',
+  background: 'var(--bg)',
+  border: '1px solid var(--border)',
+  borderRadius: 6,
+  color: 'var(--text)',
+  fontSize: 12,
+  boxSizing: 'border-box',
+};

@@ -3,6 +3,7 @@ import CanvasToolbar from './CanvasToolbar';
 import EntityTypePicker from './EntityTypePicker';
 import { useStore } from '../../store/useStore';
 import type { EntityType } from '../../types';
+import { createEntityFromSchema } from '../../entities/entityFactory';
 
 export default function CanvasOverlay() {
   const addEntity = useStore((s) => s.addEntity);
@@ -37,30 +38,13 @@ export default function CanvasOverlay() {
         setPicker(null);
         return;
       }
-      const id = `ent-${Date.now()}`;
-      const defaults: Record<string, string> = {
-        person: 'New person',
-        organization: 'New organization',
-        company: 'New company',
-        note: 'Note',
-        email: 'name@example.com',
-        phone: '+000',
-        domain: 'example.com',
-        ip: '0.0.0.0',
-      };
-      addEntity({
-        id,
+      const entity = createEntityFromSchema({
         type,
-        label: defaults[type] || `New ${type}`,
-        properties: {},
         caseId: activeCaseId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
         position: { x: picker.flowX, y: picker.flowY },
-        confidence: 50,
-        source: 'Manual',
       });
-      setSelectedEntity(id);
+      addEntity(entity);
+      setSelectedEntity(entity.id);
       setPicker(null);
       setCanvasTool('select');
     },
