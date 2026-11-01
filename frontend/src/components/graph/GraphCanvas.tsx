@@ -20,11 +20,13 @@ import '@xyflow/react/dist/style.css';
 import EntityNode from './EntityNode';
 import { useStore } from '../../store/useStore';
 import { RELATIONSHIP_LABELS, ENTITY_COLORS, type EntityType } from '../../types';
+import { useDeviceProfile } from '../../hooks/useDeviceProfile';
 
 const nodeTypes = { entity: EntityNode } as const;
 const VALID_EDGE_TYPES = new Set(['default', 'straight', 'step', 'smoothstep', 'bezier', 'simplebezier']);
 
 export default function GraphCanvas() {
+  const device = useDeviceProfile();
   const activeCaseId = useStore((s) => s.activeCaseId);
   const selectedEntityId = useStore((s) => s.selectedEntityId);
   const setSelectedEntity = useStore((s) => s.setSelectedEntity);
@@ -111,20 +113,23 @@ export default function GraphCanvas() {
       .map((r) => {
         const inPath = path.includes(r.sourceId) && path.includes(r.targetId);
         const width = variant === 'thick' ? baseWidth + 2 : inPath ? baseWidth + 1 : baseWidth;
+        const lineStyle = String(r.properties?.lineStyle || '');
+        const dashed = variant === 'dashed' || lineStyle === 'dashed';
+        const animated = variant === 'animated' || lineStyle === 'animated' || inPath;
         return {
           id: String(r.id),
           source: String(r.sourceId),
           target: String(r.targetId),
           label: graphSettings.showLabels ? RELATIONSHIP_LABELS[r.type] || r.type : undefined,
           type: edgeType === 'simplebezier' ? 'default' : edgeType,
-          animated: variant === 'animated' || inPath,
-          style: { stroke: inPath ? accent : stroke, strokeWidth: width, strokeDasharray: variant === 'dashed' ? '6 4' : undefined },
+          animated: device.reduceMotion ? false : animated,
+          style: { stroke: inPath ? accent : stroke, strokeWidth: width, strokeDasharray: dashed ? '6 4' : undefined },
           labelStyle: { fill: '#777B80', fontSize: 10, fontWeight: 500 },
           labelBgStyle: { fill: '#FCFCFB', fillOpacity: 0.9 },
           markerEnd: { type: MarkerType.ArrowClosed, color: inPath ? accent : stroke, width: 16, height: 16 },
         } as Edge;
       });
-  }, [relationships, filteredIds, highlightedPath, graphSettings.edgeVariant, graphSettings.edgeThickness, graphSettings.showLabels, appearance.accentColor, appearance.edgeColor, edgeType]);
+  }, [relationships, filteredIds, highlightedPath, graphSettings.edgeVariant, graphSettings.edgeThickness, graphSettings.showLabels, appearance.accentColor, appearance.edgeColor, edgeType, device.reduceMotion]);
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -203,12 +208,12 @@ export default function GraphCanvas() {
           ...params,
           id,
           type: edgeType === 'simplebezier' ? 'default' : edgeType,
-          animated: graphSettings.edgeVariant === 'animated',
+          animated: !device.reduceMotion && graphSettings.edgeVariant === 'animated',
           style: { stroke: appearance.edgeColor || '#94a3b8', strokeDasharray: graphSettings.edgeVariant === 'dashed' ? '6 4' : undefined },
         }, eds)
       );
     },
-    [activeCaseId, addRelationship, setEdges, graphSettings.edgeVariant, appearance.edgeColor, edgeType]
+    [activeCaseId, addRelationship, setEdges, graphSettings.edgeVariant, appearance.edgeColor, edgeType, device.reduceMotion]
   );
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => setSelectedEntity(node.id), [setSelectedEntity]);
@@ -244,22 +249,28 @@ export default function GraphCanvas() {
     if (!neighborIds) return nodes;
     return nodes.map((n) => ({
       ...n,
-      style: { ...n.style, opacity: neighborIds.has(n.id) ? 1 : 0.18, filter: neighborIds.has(n.id) ? undefined : 'grayscale(0.5)', transition: 'opacity 0.2s ease' },
+      style: {
+        ...n.style,
+        opacity: neighborIds.has(n.id) ? 1 : 0.18,
+        filter: neighborIds.has(n.id) ? undefined : 'grayscale(0.5)',
+        transition: device.reduceMotion ? undefined : 'opacity 0.2s ease',
+      },
     }));
-  }, [nodes, neighborIds]);
+  }, [nodes, neighborIds, device.reduceMotion]);
 
   const displayEdges = useMemo(() => {
     if (!neighborIds) return edges;
     return edges.map((e) => {
       const on = neighborIds.has(e.source) && neighborIds.has(e.target);
-      return { ...e, style: { ...e.style, opacity: on ? 1 : 0.08 }, animated: on ? e.animated : false };
+      return { ...e, style: { ...e.style, opacity: on ? 1 : 0.08 }, animated: on && !device.reduceMotion ? e.animated : false };
     });
-  }, [edges, neighborIds]);
+  }, [edges, neighborIds, device.reduceMotion]);
 
   const bgColor = appearance.graphBg || (appearance.theme === 'amoled' ? '#000' : appearance.theme === 'light' ? '#FCFCFB' : '#0b0f14');
   const dotColor = appearance.graphDots || (appearance.theme === 'light' ? '#E7E8E5' : '#1e293b');
   const variant = graphSettings.backgroundVariant || 'dots';
-  const panOnDrag = canvasTool === 'hand' ? true : ([1, 2] as number[]); // middle/right always pan; left only in hand mode
+  const panOnDrag = canvasTool === 'hand' ? true : ([1, 2] as number[]);
+  const showMinimap = device.showMinimap;
 
   return (
     <div className="graph-surface" style={{ width: '100%', height: '100%', background: bgColor }}>
@@ -275,11 +286,11 @@ export default function GraphCanvas() {
         onDoubleClick={onPaneDoubleClick}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
-        minZoom={0.15}
-        maxZoom={2.5}
+        fitViewOptions={{ padding: device.class === 'laptop' ? 0.15 : 0.2 }}
+        minZoom={0.12}
+        maxZoom={2.8}
         proOptions={{ hideAttribution: true }}
-        connectionRadius={30}
+        connectionRadius={device.coarsePointer ? 40 : 28}
         defaultEdgeOptions={{ type: 'smoothstep' }}
         panOnDrag={panOnDrag}
         selectionOnDrag={canvasTool === 'select'}
@@ -287,6 +298,9 @@ export default function GraphCanvas() {
         nodesConnectable={canvasTool === 'connect' || canvasTool === 'select'}
         snapToGrid={!!graphSettings.snapToGrid}
         snapGrid={[graphSettings.gridSize || 20, graphSettings.gridSize || 20]}
+        onlyRenderVisibleElements={device.onlyRenderVisible}
+        elevateNodesOnSelect
+        zoomOnDoubleClick={false}
       >
         {variant !== 'none' && (
           <Background
@@ -297,21 +311,23 @@ export default function GraphCanvas() {
           />
         )}
         <Panel position="top-right">
-          <button type="button" className="btn btn-secondary" onClick={() => {
-            /* layout via store positions left as-is */
-          }} style={{ fontSize: 11 }}>
-            Layout · {graphSettings.layoutPreset || 'force'}
+          <button type="button" className="btn btn-secondary" style={{ fontSize: 11 }}>
+            {device.class} · {graphSettings.layoutPreset || 'force'}
           </button>
         </Panel>
-        <Controls />
-        <MiniMap
-          nodeColor={(n) => {
-            const t = (n.data as { entityType?: string })?.entityType as EntityType | undefined;
-            if (!t) return '#94a3b8';
-            return appearance.entityColors?.[t] || ENTITY_COLORS[t] || '#94a3b8';
-          }}
-          maskColor={appearance.theme === 'light' ? 'rgba(247,247,245,0.7)' : 'rgba(15,23,42,0.8)'}
-        />
+        <Controls showInteractive={!device.coarsePointer} />
+        {showMinimap && (
+          <MiniMap
+            pannable
+            zoomable
+            nodeColor={(n) => {
+              const t = (n.data as { entityType?: string })?.entityType as EntityType | undefined;
+              if (!t) return '#94a3b8';
+              return appearance.entityColors?.[t] || ENTITY_COLORS[t] || '#94a3b8';
+            }}
+            maskColor={appearance.theme === 'light' ? 'rgba(247,247,245,0.7)' : 'rgba(15,23,42,0.8)'}
+          />
+        )}
       </ReactFlow>
     </div>
   );
