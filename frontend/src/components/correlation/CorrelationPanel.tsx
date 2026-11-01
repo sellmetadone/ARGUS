@@ -10,7 +10,18 @@ import {
 } from '../../services/intelligence/correlationEngine';
 import { listEvidence } from '../../services/intelligence/evidenceService';
 import { useT } from '../../i18n/useT';
-import type { Relationship } from '../../types';
+import type { Relationship, RelationshipType } from '../../types';
+
+const VALID_REL = new Set<string>([
+  'resolves_to', 'has_subdomain', 'uses_certificate', 'belongs_to', 'announced_prefix',
+  'uses', 'hosted_on', 'points_to', 'issued_by', 'contains', 'related_to', 'seen_with',
+  'registered_by', 'located_in', 'communicates_with', 'owns', 'part_of', 'works_at',
+  'employs', 'has_email', 'has_phone', 'lives_at', 'member_of', 'same_as', 'controls',
+]);
+
+function safeRelType(raw: string): RelationshipType {
+  return (VALID_REL.has(raw) ? raw : 'related_to') as RelationshipType;
+}
 
 export default function CorrelationPanel() {
   const t = useT();
@@ -37,24 +48,19 @@ export default function CorrelationPanel() {
 
   const labelOf = (id: string) => entities.find((e) => e.id === id)?.label || id;
 
-  const createSuspectedLink = (finding: CorrelationFinding, sourceId: string, targetId: string) => {
-    if (!activeCaseId) return;
-    const type = suggestedTypeForFinding(finding);
-    if (edgeExists(relationships, sourceId, targetId, type)) {
-      setFlash(t('corr_already_linked'));
-      window.setTimeout(() => setFlash(''), 2500);
-      return;
-    }
-    if (edgeExists(relationships, sourceId, targetId)) {
-      setFlash(t('corr_already_linked'));
-      window.setTimeout(() => setFlash(''), 2500);
-      return;
-    }
+  const buildRel = (
+    finding: CorrelationFinding,
+    sourceId: string,
+    targetId: string
+  ): Relationship | null => {
+    if (!activeCaseId) return null;
+    const type = safeRelType(suggestedTypeForFinding(finding));
+    if (edgeExists(relationships, sourceId, targetId)) return null;
     const id = `rel-corr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const now = new Date().toISOString();
-    const rel: Relationship = {
+    return {
       id,
-      type: type as Relationship['type'],
+      type,
       sourceId,
       targetId,
       caseId: activeCaseId,
@@ -71,26 +77,47 @@ export default function CorrelationPanel() {
       confidence: Math.min(finding.confidence, 60),
       firstSeen: now,
     };
+  };
+
+  const createSuspectedLink = (finding: CorrelationFinding, sourceId: string, targetId: string) => {
+    const rel = buildRel(finding, sourceId, targetId);
+    if (!rel) {
+      setFlash(t('corr_already_linked'));
+      window.setTimeout(() => setFlash(''), 2500);
+      return;
+    }
     addRelationship(rel);
-    setSelectedRelationship(id);
+    setSelectedRelationship(rel.id);
     setHighlightedPath([sourceId, targetId]);
     setFlash(t('corr_link_created'));
     window.setTimeout(() => setFlash(''), 2500);
   };
 
+  /** Batch create without relying on stale relationship snapshot mid-loop. */
   const createAllPairs = (finding: CorrelationFinding) => {
     const pairs = linkablePairs(finding);
-    let n = 0;
+    let existing = relationships;
+    let created = 0;
+    let lastIds: [string, string] | null = null;
+    let lastRelId = '';
     for (const [a, b] of pairs) {
-      if (!edgeExists(relationships, a, b)) {
-        createSuspectedLink(finding, a, b);
-        n++;
-      }
+      if (edgeExists(existing, a, b)) continue;
+      const rel = buildRel(finding, a, b);
+      if (!rel) continue;
+      addRelationship(rel);
+      existing = [...existing, rel];
+      created++;
+      lastIds = [a, b];
+      lastRelId = rel.id;
     }
-    if (n === 0) {
+    if (created === 0) {
       setFlash(t('corr_already_linked'));
-      window.setTimeout(() => setFlash(''), 2500);
+    } else {
+      if (lastIds) setHighlightedPath(lastIds);
+      if (lastRelId) setSelectedRelationship(lastRelId);
+      setFlash(`${t('corr_link_created')} (${created})`);
     }
+    window.setTimeout(() => setFlash(''), 2500);
   };
 
   return (
