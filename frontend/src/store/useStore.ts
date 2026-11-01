@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import type { Case, Entity, Relationship, TimelineEvent, EntityType } from '../types';
-import { demoCases, demoEntities, demoRelationships, demoTimeline } from '../data/demo';
 import { caseRepository } from '../core/storage/caseRepository';
+import { getInitialCaseData } from '../core/storage/initState';
+
+const boot = getInitialCaseData();
 
 export type ThemeMode = 'dark' | 'light' | 'amoled';
 export type WorkspaceLayout = 'osint' | 'infrastructure' | 'forensics' | 'geosint' | 'custom';
@@ -188,8 +190,8 @@ function persistActiveCase(get: () => AppState) {
 }
 
 export const useStore = create<AppState>((set, get) => ({
-  cases: demoCases,
-  activeCaseId: demoCases[0]?.id ?? null,
+  cases: boot.cases,
+  activeCaseId: boot.activeCaseId,
   setActiveCase: (id) =>
     set({
       activeCaseId: id,
@@ -245,8 +247,8 @@ export const useStore = create<AppState>((set, get) => ({
     persistActiveCase(get);
   },
 
-  entities: demoEntities,
-  relationships: demoRelationships,
+  entities: boot.entities,
+  relationships: boot.relationships,
   selectedEntityId: null,
   selectedRelationshipId: null,
   setSelectedEntity: (id) =>
@@ -326,7 +328,7 @@ export const useStore = create<AppState>((set, get) => ({
     set({ highlightedPath: [id, ...neighborIds], selectedEntityId: id });
   },
 
-  timeline: demoTimeline,
+  timeline: boot.timeline,
   selectedTimelineEventId: null,
   setSelectedTimelineEvent: (id) => set({ selectedTimelineEventId: id }),
 
