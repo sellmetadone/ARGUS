@@ -15,12 +15,12 @@ import EvidencePanel from './components/evidence/EvidencePanel';
 import CorrelationPanel from './components/correlation/CorrelationPanel';
 import AiAssistantPanel from './components/ai/AiAssistantPanel';
 import CanvasOverlay from './components/canvas/CanvasOverlay';
+import MapPanel from './components/map/MapPanel';
 import { useStore } from './store/useStore';
 import { Map, Clock, Search, Settings, Undo2, Redo2, Download, Workflow, Network, FileText, GitCompare, Bot } from 'lucide-react';
 import { useT } from './i18n/useT';
 import { LANG_META, type LangCode } from './i18n/locales';
 import { useDeviceProfile } from './hooks/useDeviceProfile';
-import { bootstrapAppState } from './core/storage/bootstrap';
 
 export default function App() {
   const t = useT();
@@ -29,25 +29,6 @@ export default function App() {
     panels, togglePanel, activeCaseId, cases, appearance, graphSearchQuery, setGraphSearchQuery,
     undo, redo, exportGraph, setCommandPaletteOpen, graphSettings, showWelcome, setShowWelcome,
   } = useStore();
-
-  const hydrated = useRef(false);
-  useEffect(() => {
-    if (hydrated.current) return;
-    hydrated.current = true;
-    const boot = bootstrapAppState();
-    if (boot.source === 'localStorage' && boot.cases.length) {
-      useStore.setState({
-        cases: boot.cases,
-        entities: boot.entities,
-        relationships: boot.relationships,
-        timeline: boot.timeline,
-        activeCaseId: boot.activeCaseId,
-        selectedEntityId: null,
-        selectedRelationshipId: null,
-        highlightedPath: [],
-      });
-    }
-  }, []);
 
   const activeCase = cases.find((c) => c.id === activeCaseId);
   const [themeFlash, setThemeFlash] = useState(false);
@@ -78,13 +59,7 @@ export default function App() {
     prevTheme.current = key;
   }, [appearance, device.reduceMotion]);
 
-  const shellClass = [
-    'argus-shell',
-    device.compactToolbar ? 'compact-toolbar' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-
+  const shellClass = ['argus-shell', device.compactToolbar ? 'compact-toolbar' : ''].filter(Boolean).join(' ');
   const showToolbarLabel = !device.compactToolbar;
 
   return (
@@ -130,15 +105,7 @@ export default function App() {
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             {graphSettings.enable3d ? <Graph3D /> : <GraphCanvas />}
             {!graphSettings.enable3d && <CanvasOverlay />}
-            {panels.map && (
-              <div style={{ position: 'absolute', inset: 0, background: 'var(--panel)', opacity: 0.95, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
-                <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                  <Map size={40} style={{ marginBottom: 12, opacity: 0.5 }} />
-                  <div style={{ fontSize: 14 }}>{t('map_title')}</div>
-                  <div style={{ fontSize: 12, marginTop: 4 }}>{t('map_planned')}</div>
-                </div>
-              </div>
-            )}
+            {panels.map && <MapPanel />}
           </div>
           {panels.timeline && <Timeline />}
         </div>
