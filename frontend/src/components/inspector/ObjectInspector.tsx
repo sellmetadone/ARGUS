@@ -27,17 +27,22 @@ export default function ObjectInspector() {
   } = useStore();
 
   const [tab, setTab] = useState<Tab>('data');
-  const entity = entities.find((e) => e.id === selectedEntityId);
-  const rel = relationships.find((r) => r.id === selectedRelationshipId);
+  const entity = entities.find((e) => e.id === selectedEntityId) ?? null;
+  const rel = relationships.find((r) => r.id === selectedRelationshipId) ?? null;
+
+  // All hooks must run every render — never after early return
+  const entityId = entity?.id;
+  const related = useMemo(
+    () =>
+      entityId
+        ? relationships.filter((r) => r.sourceId === entityId || r.targetId === entityId)
+        : [],
+    [relationships, entityId]
+  );
+  const schema = useMemo(() => (entity ? getSchema(entity.type) : null), [entity]);
 
   if (rel && !entity) return <ConnectionEditor />;
-  if (!entity) return null;
-
-  const schema = getSchema(entity.type);
-  const related = useMemo(
-    () => relationships.filter((r) => r.sourceId === entity.id || r.targetId === entity.id),
-    [relationships, entity.id]
-  );
+  if (!entity || !schema) return null;
 
   const setField = (field: SchemaField, raw: string) => {
     const nextProps = { ...entity.properties, [field.key]: raw };
@@ -331,7 +336,12 @@ export default function ObjectInspector() {
           type="button"
           className="btn btn-danger"
           onClick={() => {
-            if (window.confirm(t('insp_delete_confirm'))) removeEntity(entity.id);
+            if (window.confirm(t('insp_delete_confirm'))) {
+              const id = entity.id;
+              setSelectedEntity(null);
+              setSelectedRelationship(null);
+              removeEntity(id);
+            }
           }}
         >
           <Trash2 size={14} /> {t('delete')}
