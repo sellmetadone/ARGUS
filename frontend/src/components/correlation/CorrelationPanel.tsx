@@ -1,17 +1,19 @@
 import { useMemo } from 'react';
-import { GitCompare } from 'lucide-react';
+import { GitCompare, X } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { runCorrelation } from '../../services/intelligence/correlationEngine';
 import { listEvidence } from '../../services/intelligence/evidenceService';
+import { useT } from '../../i18n/useT';
 
 export default function CorrelationPanel() {
+  const t = useT();
   const {
     activeCaseId,
     getEntitiesForCase,
     getRelationshipsForCase,
     setHighlightedPath,
     setSelectedEntity,
-    appearance,
+    setPanel,
   } = useStore();
 
   const entities = activeCaseId ? getEntitiesForCase(activeCaseId) : [];
@@ -23,36 +25,41 @@ export default function CorrelationPanel() {
     [entities, relationships, evidence]
   );
 
-  const panelBg = appearance.theme === 'light' ? '#fff' : '#0f172a';
-
   return (
     <div
+      className="argus-panel"
       style={{
         width: 360,
-        background: panelBg,
-        borderLeft: '1px solid #1e293b',
+        background: 'var(--panel)',
+        borderLeft: '1px solid var(--border)',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        color: 'var(--text)',
       }}
     >
-      <div style={{ padding: '12px 14px', borderBottom: '1px solid #1e293b', fontWeight: 600, fontSize: 13 }}>
-        <GitCompare size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
-        Correlation Results
+      <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>
+          <GitCompare size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+          {t('correlate')}
+        </span>
+        <button type="button" className="btn btn-ghost" style={{ padding: 4 }} onClick={() => setPanel('correlation', false)}>
+          <X size={14} />
+        </button>
       </div>
-      <div style={{ padding: '8px 12px', fontSize: 11, color: '#64748b', borderBottom: '1px solid #1e293b' }}>
-        Findings are hypotheses with stated limitations — not established facts.
+      <div style={{ padding: '8px 12px', fontSize: 11, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
+        {t('corr_disclaimer')}
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
         {findings.length === 0 && (
-          <div style={{ fontSize: 12, color: '#64748b' }}>No correlation findings for this case snapshot.</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t('corr_empty')}</div>
         )}
         {findings.map((f) => (
           <div
             key={f.id}
             style={{
-              border: '1px solid #1e293b',
+              border: '1px solid var(--border)',
               borderRadius: 8,
               padding: 10,
               marginBottom: 10,
@@ -60,15 +67,15 @@ export default function CorrelationPanel() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-              <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{f.title}</span>
+              <span style={{ fontWeight: 600 }}>{f.title}</span>
               <span style={{ color: severityColor(f.severity), fontSize: 11 }}>{f.severity}</span>
             </div>
-            <div style={{ color: '#94a3b8', marginTop: 6 }}>{f.basis}</div>
-            <div style={{ color: '#64748b', marginTop: 4, fontSize: 11 }}>
-              Confidence {f.confidence}% · {f.limitations}
+            <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>{f.basis}</div>
+            <div style={{ color: 'var(--text-muted)', marginTop: 4, fontSize: 11 }}>
+              {t('rel_confidence')} {f.confidence}% · {f.limitations}
             </div>
             {f.dataUsed.length > 0 && (
-              <ul style={{ margin: '6px 0 0', paddingLeft: 16, color: '#94a3b8', fontSize: 11 }}>
+              <ul style={{ margin: '6px 0 0', paddingLeft: 16, color: 'var(--text-muted)', fontSize: 11 }}>
                 {f.dataUsed.slice(0, 6).map((d) => (
                   <li key={d}>{d}</li>
                 ))}
@@ -76,22 +83,14 @@ export default function CorrelationPanel() {
             )}
             <button
               type="button"
+              className="btn btn-secondary"
               onClick={() => {
                 if (f.entityIds[0]) setSelectedEntity(f.entityIds[0]);
                 setHighlightedPath(f.entityIds);
               }}
-              style={{
-                marginTop: 8,
-                padding: '4px 8px',
-                background: 'transparent',
-                border: '1px solid #334155',
-                borderRadius: 4,
-                color: '#94a3b8',
-                cursor: 'pointer',
-                fontSize: 11,
-              }}
+              style={{ marginTop: 8, fontSize: 11 }}
             >
-              Highlight entities
+              {t('corr_highlight')}
             </button>
           </div>
         ))}
@@ -103,5 +102,5 @@ export default function CorrelationPanel() {
 function severityColor(s: string) {
   if (s === 'critical') return '#f87171';
   if (s === 'warning') return '#fbbf24';
-  return '#94a3b8';
+  return 'var(--text-muted)';
 }
