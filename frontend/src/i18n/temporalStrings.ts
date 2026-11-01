@@ -11,6 +11,8 @@ export const TEMPORAL_EN: Record<string, string> = {
   corr_link_hint: 'Adds dashed bidirectional edges with status=suspected. Not proof.',
   corr_link_created: 'Suspected link created',
   corr_already_linked: 'Already linked',
+  map_no_points: 'No entities with lat/lng. Set latitude & longitude on location entities.',
+  map_points: 'geo points',
 };
 
 export const TEMPORAL_RU: Record<string, string> = {
@@ -25,4 +27,6 @@ export const TEMPORAL_RU: Record<string, string> = {
   corr_link_hint: 'Добавляет пунктирные двусторонние рёбра status=suspected. Не доказательство.',
   corr_link_created: 'Предполагаемая связь создана',
   corr_already_linked: 'Уже связано',
+  map_no_points: 'Нет сущностей с lat/lng. Укажите широту и долготу у локаций.',
+  map_points: 'точек',
 };

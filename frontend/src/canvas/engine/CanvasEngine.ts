@@ -2,6 +2,7 @@ import {
   createInitialCanvasState,
   DEFAULT_LAYER,
   type CanvasEngineState,
+  type CanvasLayer,
   type CanvasObject,
   type CanvasTool,
   type CanvasViewport,
@@ -16,16 +17,19 @@ export type EntityMirror = {
 };
 
 /**
- * In-memory CanvasEngine. React Flow remains the renderer;
- * this class is the single place for viewport / tool / object mirror.
+ * In-memory CanvasEngine — layout mirror + layers + notes + lightweight history.
+ * React Flow remains the primary graph renderer.
  */
 export class CanvasEngine {
   private state: CanvasEngineState;
   private listeners = new Set<(s: CanvasEngineState) => void>();
   private viewportRaf = 0;
+  private history: CanvasEngineState[] = [];
+  private historyIndex = -1;
 
   constructor(initial?: CanvasEngineState) {
     this.state = initial || createInitialCanvasState();
+    this.pushHistorySilent();
   }
 
   getState(): CanvasEngineState {
@@ -42,7 +46,32 @@ export class CanvasEngine {
     this.listeners.forEach((fn) => fn(snap));
   }
 
-  /** Switch investigation — clears object mirror for previous case. */
+  private pushHistorySilent() {
+    const snap = JSON.parse(JSON.stringify(this.state)) as CanvasEngineState;
+    this.history = this.history.slice(0, this.historyIndex + 1);
+    this.history.push(snap);
+    if (this.history.length > 40) this.history.shift();
+    this.historyIndex = this.history.length - 1;
+  }
+
+  private checkpoint() {
+    this.pushHistorySilent();
+  }
+
+  undoCanvas() {
+    if (this.historyIndex <= 0) return;
+    this.historyIndex -= 1;
+    this.state = JSON.parse(JSON.stringify(this.history[this.historyIndex])) as CanvasEngineState;
+    this.emit();
+  }
+
+  redoCanvas() {
+    if (this.historyIndex >= this.history.length - 1) return;
+    this.historyIndex += 1;
+    this.state = JSON.parse(JSON.stringify(this.history[this.historyIndex])) as CanvasEngineState;
+    this.emit();
+  }
+
   setCase(caseId: string | null) {
     if (this.state.caseId === caseId) return;
     this.state = {
@@ -50,6 +79,7 @@ export class CanvasEngine {
       tool: this.state.tool,
       viewport: this.state.viewport,
     };
+    this.checkpoint();
     this.emit();
   }
 
@@ -59,7 +89,6 @@ export class CanvasEngine {
     this.emit();
   }
 
-  /** Debounced viewport writes (pan/zoom fire often). */
   setViewport(viewport: Partial<CanvasViewport>, immediate = false) {
     const next = { ...this.state.viewport, ...viewport };
     const apply = () => {
@@ -83,19 +112,62 @@ export class CanvasEngine {
     this.emit();
   }
 
-  /** Full replace of entity mirrors for active case (structure sync). */
+  addLayer(name: string): CanvasLayer {
+    const layer: CanvasLayer = {
+      id: `layer-${Date.now()}`,
+      name,
+      visible: true,
+      locked: false,
+      order: this.state.layers.length,
+    };
+    this.state = { ...this.state, layers: [...this.state.layers, layer] };
+    this.checkpoint();
+    this.emit();
+    return layer;
+  }
+
+  setLayerVisible(layerId: string, visible: boolean) {
+    this.state = {
+      ...this.state,
+      layers: this.state.layers.map((l) => (l.id === layerId ? { ...l, visible } : l)),
+    };
+    this.emit();
+  }
+
+  addNote(x: number, y: number, text: string) {
+    const layerId = this.state.layers[0]?.id || DEFAULT_LAYER.id;
+    const obj: CanvasObject = {
+      id: `note-${Date.now()}`,
+      kind: 'note',
+      layerId,
+      x,
+      y,
+      label: text,
+      width: 180,
+      height: 80,
+    };
+    this.state = { ...this.state, objects: [...this.state.objects, obj] };
+    this.checkpoint();
+    this.emit();
+    return obj;
+  }
+
   syncEntities(entities: EntityMirror[]) {
     const layerId = this.state.layers[0]?.id || DEFAULT_LAYER.id;
-    const objects: CanvasObject[] = entities.map((e) => ({
-      id: `obj-${e.id}`,
-      kind: 'entity' as const,
-      entityId: e.id,
-      layerId,
-      x: e.x,
-      y: e.y,
-      label: e.label,
-      locked: e.locked,
-    }));
+    const nonEntity = this.state.objects.filter((o) => o.kind !== 'entity');
+    const objects: CanvasObject[] = [
+      ...nonEntity,
+      ...entities.map((e) => ({
+        id: `obj-${e.id}`,
+        kind: 'entity' as const,
+        entityId: e.id,
+        layerId,
+        x: e.x,
+        y: e.y,
+        label: e.label,
+        locked: e.locked,
+      })),
+    ];
     this.state = {
       ...this.state,
       objects,
@@ -126,7 +198,11 @@ export class CanvasEngine {
         },
       ];
     }
-    this.state = { ...this.state, objects, entityCount: objects.filter((o) => o.kind === 'entity').length };
+    this.state = {
+      ...this.state,
+      objects,
+      entityCount: objects.filter((o) => o.kind === 'entity').length,
+    };
     this.emit();
   }
 
