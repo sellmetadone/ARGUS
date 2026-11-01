@@ -24,12 +24,19 @@ import { RELATIONSHIP_LABELS, ENTITY_COLORS, type EntityType } from '../../types
 import { useDeviceProfile } from '../../hooks/useDeviceProfile';
 import { canvasEngine } from '../../canvas/engine';
 import type { CanvasTool } from '../../canvas/engine';
+import { useTemporalFilter } from '../../store/temporalFilterStore';
+import { filterGraphByTemporalRange } from '../../services/intelligence/timelineService';
 
 const nodeTypes = { entity: EntityNode } as const;
 const VALID_EDGE_TYPES = new Set(['default', 'straight', 'step', 'smoothstep', 'bezier', 'simplebezier']);
 
 export default function GraphCanvas() {
   const device = useDeviceProfile();
+  const temporalEnabled = useTemporalFilter((s) => s.enabled);
+  const temporalFrom = useTemporalFilter((s) => s.from);
+  const temporalTo = useTemporalFilter((s) => s.to);
+  const keepUndated = useTemporalFilter((s) => s.keepUndated);
+
   const activeCaseId = useStore((s) => s.activeCaseId);
   const selectedEntityId = useStore((s) => s.selectedEntityId);
   const setSelectedEntity = useStore((s) => s.setSelectedEntity);
@@ -48,14 +55,26 @@ export default function GraphCanvas() {
   const allRelationships = useStore((s) => s.relationships);
   const { screenToFlowPosition } = useReactFlow();
 
-  const entities = useMemo(
+  const caseEntities = useMemo(
     () => (activeCaseId ? allEntities.filter((e) => e.caseId === activeCaseId) : []),
     [allEntities, activeCaseId]
   );
-  const relationships = useMemo(
+  const caseRelationships = useMemo(
     () => (activeCaseId ? allRelationships.filter((r) => r.caseId === activeCaseId) : []),
     [allRelationships, activeCaseId]
   );
+
+  const temporalSlice = useMemo(() => {
+    if (!temporalEnabled || (!temporalFrom && !temporalTo)) {
+      return { entities: caseEntities, relationships: caseRelationships, hiddenEntityIds: [] as string[] };
+    }
+    return filterGraphByTemporalRange(caseEntities, caseRelationships, temporalFrom || undefined, temporalTo || undefined, {
+      keepUndated,
+    });
+  }, [caseEntities, caseRelationships, temporalEnabled, temporalFrom, temporalTo, keepUndated]);
+
+  const entities = temporalSlice.entities;
+  const relationships = temporalSlice.relationships;
 
   const filteredEntities = useMemo(() => {
     let list = entities;
@@ -77,6 +96,7 @@ export default function GraphCanvas() {
   }, [graphSettings.edgeStyle]);
   const pathKey = useMemo(() => (highlightedPath || []).join(','), [highlightedPath]);
   const pinKey = useMemo(() => (pinnedNodeIds || []).join(','), [pinnedNodeIds]);
+  const temporalKey = `${temporalEnabled}|${temporalFrom}|${temporalTo}|${keepUndated}`;
   const styleKey = useMemo(
     () =>
       [
@@ -104,10 +124,9 @@ export default function GraphCanvas() {
       .map((r) => r.id)
       .sort()
       .join(',');
-    return `${activeCaseId}|${filteredIdKey}|${rids}`;
-  }, [activeCaseId, filteredIdKey, relationships, filteredIds]);
+    return `${activeCaseId}|${filteredIdKey}|${rids}|${temporalKey}`;
+  }, [activeCaseId, filteredIdKey, relationships, filteredIds, temporalKey]);
 
-  /* ——— CanvasEngine bridge ——— */
   useEffect(() => {
     canvasEngine.setCase(activeCaseId);
   }, [activeCaseId]);
@@ -206,7 +225,6 @@ export default function GraphCanvas() {
       return nextNodes.map((n) => ({ ...n, position: posMap[n.id] || n.position }));
     });
     setEdges(makeEdges());
-    // Mirror layout into CanvasEngine
     canvasEngine.syncEntities(
       nextNodes.map((n) => ({
         id: n.id,
@@ -264,7 +282,6 @@ export default function GraphCanvas() {
             updateEntityPosition(ch.id, ch.position);
             canvasEngine.upsertEntityObject(ch.id, ch.position.x, ch.position.y);
           } else if (ch.dragging === true) {
-            // live mirror while dragging
             canvasEngine.upsertEntityObject(ch.id, ch.position.x, ch.position.y);
           }
         }
@@ -403,6 +420,7 @@ export default function GraphCanvas() {
   const panOnDrag = canvasTool === 'hand' ? true : ([1, 2] as number[]);
   const showMinimap = device.showMinimap;
   const engineSnap = canvasEngine.getState();
+  const hiddenCount = temporalSlice.hiddenEntityIds.length;
 
   return (
     <div className="graph-surface" style={{ width: '100%', height: '100%', background: bgColor }}>
@@ -450,8 +468,10 @@ export default function GraphCanvas() {
           />
         )}
         <Panel position="top-right">
-          <button type="button" className="btn btn-secondary" style={{ fontSize: 11 }} title="CanvasEngine mirror">
+          <button type="button" className="btn btn-secondary" style={{ fontSize: 11 }} title="CanvasEngine + temporal">
             {device.class} · {canvasTool} · n={engineSnap.entityCount}
+            {temporalEnabled && hiddenCount > 0 ? ` · −${hiddenCount}` : ''}
+            {temporalEnabled ? ' · T' : ''}
           </button>
         </Panel>
         <Controls showInteractive={!device.coarsePointer} />
