@@ -64,7 +64,6 @@
   --edge: #555;
 }
 
-/* Density presets (laptop compact / desktop spacious) */
 [data-density="compact"] {
   --base-font: 12.5px;
   --header-h: 46px;
@@ -100,7 +99,6 @@ html, body, #root {
   text-rendering: optimizeLegibility;
 }
 
-/* GPU-friendly canvas layer */
 .graph-surface,
 .react-flow {
   transform: translateZ(0);
@@ -126,7 +124,6 @@ html, body, #root {
   border-color: var(--border);
 }
 
-/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -268,85 +265,217 @@ html, body, #root {
   animation: none !important;
 }
 
-/* ——— Desktop / laptop first breakpoints ——— */
-
-/* Large desktop / ultrawide: more chrome room */
 @media (min-width: 1600px) {
-  :root {
-    --sidebar-w: 300px;
-    --inspector-w: 380px;
-  }
+  :root { --sidebar-w: 300px; --inspector-w: 380px; }
   .canvas-toolbar { left: 16px; }
 }
-
 @media (min-width: 1920px) {
-  :root {
-    --base-font: 13.5px;
-    --sidebar-w: 300px;
-    --inspector-w: 400px;
-  }
+  :root { --base-font: 13.5px; --sidebar-w: 300px; --inspector-w: 400px; }
 }
-
-/* Typical laptop 1366–1512 */
 @media (min-width: 1100px) and (max-width: 1512px) {
-  :root {
-    --sidebar-w: 250px;
-    --inspector-w: 320px;
-  }
+  :root { --sidebar-w: 250px; --inspector-w: 320px; }
 }
-
-/* Compact laptop height */
 @media (min-width: 1100px) and (max-height: 800px) {
-  :root {
-    --header-h: 44px;
-    --base-font: 12.5px;
-  }
+  :root { --header-h: 44px; --base-font: 12.5px; }
   .canvas-toolbar { padding: 4px; gap: 2px; }
 }
-
-/* Narrow window: hide verbose toolbar labels via class from App */
-.argus-shell.compact-toolbar .btn-icon span {
-  display: none;
-}
-
-/* Tablet */
+.argus-shell.compact-toolbar .btn-icon span { display: none; }
 @media (max-width: 1023px) {
-  :root {
-    --sidebar-w: 220px;
-    --inspector-w: 280px;
-    --touch-min: 6px;
-  }
+  :root { --sidebar-w: 220px; --inspector-w: 280px; --touch-min: 6px; }
   .canvas-toolbar {
-    left: 8px;
-    top: auto;
-    bottom: 12px;
-    transform: none;
-    flex-direction: row;
+    left: 8px; top: auto; bottom: 12px; transform: none; flex-direction: row;
   }
 }
-
-/* Phone — usable, not primary */
 @media (max-width: 719px) {
-  :root {
-    --touch-min: 12px;
-    --header-h: 48px;
-    --base-font: 13px;
-  }
+  :root { --touch-min: 12px; --header-h: 48px; --base-font: 13px; }
   .argus-shell > header {
-    flex-wrap: wrap;
-    height: auto !important;
-    min-height: var(--header-h);
-    padding: 8px !important;
+    flex-wrap: wrap; height: auto !important; min-height: var(--header-h); padding: 8px !important;
   }
-  .entity-type-menu {
-    width: min(280px, calc(100vw - 24px));
-  }
+  .entity-type-menu { width: min(280px, calc(100vw - 24px)); }
 }
-
-/* Prefer fine pointer hover affordances on PC */
 @media (hover: hover) and (pointer: fine) {
   .btn:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
 }
+
+/* ARGUS graph visual system — restrained light analytical canvas */
+.graph-surface {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(82,108,140,.035), transparent 62%),
+    var(--canvas);
+}
+.argus-flow { background: transparent; }
+.argus-flow .react-flow__pane { cursor: default; }
+.argus-flow .react-flow__selection {
+  background: rgba(82,108,140,.10);
+  border: 1px solid rgba(82,108,140,.55);
+}
+.argus-flow .react-flow__node {
+  border-radius: 10px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.argus-flow .react-flow__node.selected { box-shadow: none; }
+.argus-flow .react-flow__edge-path {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.argus-flow .react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--accent) !important;
+  stroke-width: 2.4px !important;
+}
+.argus-flow .react-flow__edge-text {
+  font-size: 10px;
+  font-weight: 500;
+}
+.argus-flow .react-flow__edge-textbg {
+  fill: var(--panel);
+  fill-opacity: .96;
+  rx: 4px;
+}
+.argus-flow .react-flow__controls {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel);
+  box-shadow: 0 3px 12px rgba(28,39,52,.07);
+}
+.argus-flow .react-flow__controls-button {
+  width: 28px;
+  height: 28px;
+  border: 0 !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.argus-flow .react-flow__minimap {
+  overflow: hidden;
+  border-radius: 10px !important;
+  background: var(--panel) !important;
+  box-shadow: 0 3px 14px rgba(28,39,52,.07);
+}
+.argus-flow .react-flow__attribution { display: none; }
+
+.argus-entity-node {
+  position: relative;
+  min-width: 176px;
+  max-width: 252px;
+  padding: 0;
+  overflow: visible;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--entity-accent) 27%, var(--border));
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(28,39,52,.055), 0 8px 20px rgba(28,39,52,.045);
+  transform: scale(var(--node-scale, 1));
+  transform-origin: center;
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+  cursor: grab;
+}
+.argus-entity-node:active { cursor: grabbing; }
+.argus-entity-node:hover {
+  border-color: color-mix(in srgb, var(--entity-accent) 55%, var(--border));
+  box-shadow: 0 3px 8px rgba(28,39,52,.07), 0 10px 24px rgba(28,39,52,.075);
+}
+.argus-entity-node.is-active {
+  border-color: var(--entity-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--entity-accent) 18%, transparent),
+              0 8px 22px rgba(28,39,52,.10);
+}
+.argus-node-accent {
+  position: absolute;
+  left: 0;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--entity-accent);
+  opacity: .9;
+}
+.argus-node-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 10px 12px 10px 14px;
+}
+.argus-node-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: var(--entity-accent);
+  background: color-mix(in srgb, var(--entity-accent) 10%, var(--panel));
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: -.25px;
+  border: 1px solid color-mix(in srgb, var(--entity-accent) 14%, transparent);
+}
+.argus-node-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+.argus-node-type {
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.1;
+  font-weight: 650;
+  letter-spacing: .075em;
+  text-transform: uppercase;
+}
+.argus-node-title {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.argus-node-pin {
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.argus-node-handle {
+  opacity: 0;
+  transition: opacity .14s ease, transform .14s ease;
+}
+.argus-entity-node:hover .argus-node-handle,
+.argus-entity-node.is-active .argus-node-handle {
+  opacity: 1;
+}
+.argus-node-handle:hover { transform: scale(1.35); }
+.react-flow__node:focus { outline: none; }
+.react-flow__node:focus-visible .argus-entity-node {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (max-width: 719px) {
+  .argus-entity-node { min-width: 154px; max-width: 210px; }
+  .argus-node-content { min-height: 52px; padding: 8px 10px 8px 12px; gap: 8px; }
+  .argus-node-icon { width: 30px; height: 30px; flex-basis: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .argus-entity-node, .argus-node-handle { transition: none !important; }
+}
+
+.argus-flow .react-flow__edge.argus-edge-confirmed .react-flow__edge-path { stroke-linecap: round; }
+.argus-flow .react-flow__edge.argus-edge-assumed .react-flow__edge-path { stroke-dasharray: 5 4; }
+.argus-flow .react-flow__edge.argus-edge-unknown .react-flow__edge-path { opacity: .72; }
