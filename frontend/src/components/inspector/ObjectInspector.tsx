@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { X, Trash2, Pin, History, Link2, FileText, Info } from 'lucide-react';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { X, Trash2, Pin, History, Link2, FileText, Info, Map as MapIcon } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { ENTITY_COLORS, RELATIONSHIP_LABELS } from '../../types';
 import ConnectionEditor from '../connections/ConnectionEditor';
@@ -8,6 +8,15 @@ import { getSchema, type SchemaField } from '../../entities/entitySchemas';
 import { labelFromProperties } from '../../entities/entityFactory';
 
 type Tab = 'overview' | 'data' | 'sources' | 'relations' | 'history';
+
+function hasGeo(props: Record<string, unknown> | undefined): boolean {
+  if (!props) return false;
+  const lat = Number(props.lat ?? props.latitude);
+  const lng = Number(props.lng ?? props.lon ?? props.longitude);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) return true;
+  const raw = props.coordinates ?? props.geo;
+  return typeof raw === 'string' && raw.includes(',');
+}
 
 export default function ObjectInspector() {
   const t = useT();
@@ -24,6 +33,7 @@ export default function ObjectInspector() {
     pinnedNodeIds,
     appearance,
     history,
+    setPanel,
   } = useStore();
 
   const [tab, setTab] = useState<Tab>('data');
@@ -40,12 +50,18 @@ export default function ObjectInspector() {
     [relationships, entityId]
   );
   const schema = useMemo(() => (entity ? getSchema(entity.type) : null), [entity]);
+  const showOnMap = Boolean(entity && hasGeo(entity.properties as Record<string, unknown>));
 
   if (rel && !entity) return <ConnectionEditor />;
   if (!entity || !schema) return null;
 
   const setField = (field: SchemaField, raw: string) => {
-    const nextProps = { ...entity.properties, [field.key]: raw };
+    let value: string | number = raw;
+    if (field.kind === 'number') {
+      const n = Number(String(raw).replace(',', '.'));
+      value = Number.isFinite(n) ? n : raw;
+    }
+    const nextProps = { ...entity.properties, [field.key]: value };
     const patch: Parameters<typeof updateEntity>[1] = { properties: nextProps };
     if (field.isLabel) {
       patch.label = labelFromProperties(entity.type, nextProps, entity.label);
@@ -58,7 +74,7 @@ export default function ObjectInspector() {
     return v == null ? '' : String(v);
   };
 
-  const tabs: { id: Tab; icon: React.ReactNode; label: string }[] = [
+  const tabs: { id: Tab; icon: ReactNode; label: string }[] = [
     { id: 'overview', icon: <Info size={13} />, label: t('insp_overview') },
     { id: 'data', icon: <FileText size={13} />, label: t('insp_data') },
     { id: 'sources', icon: <FileText size={13} />, label: t('insp_sources') },
@@ -70,7 +86,9 @@ export default function ObjectInspector() {
     <div
       className="argus-panel"
       style={{
-        width: 360,
+        width: 'var(--inspector-w, 360px)',
+        minWidth: 280,
+        maxWidth: 480,
         background: 'var(--panel)',
         borderLeft: '1px solid var(--border)',
         height: '100%',
@@ -164,7 +182,9 @@ export default function ObjectInspector() {
             <Row label={t('insp_updated')} value={entity.updatedAt?.slice(0, 19) || '—'} />
             <Row label={t('insp_first_seen')} value={entity.firstSeen?.slice(0, 19) || '—'} />
             <Row label={t('insp_last_seen')} value={entity.lastSeen?.slice(0, 19) || '—'} />
-            <label style={lbl}>{t('rel_confidence')} · {entity.confidence ?? 50}%</label>
+            <label style={lbl}>
+              {t('rel_confidence')} · {entity.confidence ?? 50}%
+            </label>
             <input
               type="range"
               min={0}
@@ -180,6 +200,16 @@ export default function ObjectInspector() {
               rows={4}
               style={{ ...inp, resize: 'vertical' }}
             />
+            {showOnMap && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ width: '100%', marginTop: 8 }}
+                onClick={() => setPanel('map', true)}
+              >
+                <MapIcon size={14} /> {t('insp_show_on_map')}
+              </button>
+            )}
           </>
         )}
 
@@ -210,6 +240,7 @@ export default function ObjectInspector() {
                     }
                     value={fieldValue(field.key)}
                     onChange={(e) => setField(field, e.target.value)}
+                    step={field.kind === 'number' ? 'any' : undefined}
                     className={field.kind === 'mono' ? 'mono' : undefined}
                     style={inp}
                   />
@@ -245,9 +276,7 @@ export default function ObjectInspector() {
               placeholder={t('rel_source_ph')}
               style={inp}
             />
-            <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 8 }}>
-              {t('insp_source_hint')}
-            </p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 8 }}>{t('insp_source_hint')}</p>
             <label style={lbl}>{t('field_tags')}</label>
             <input
               value={(entity.tags || []).join(', ')}
@@ -291,9 +320,7 @@ export default function ObjectInspector() {
                     setSelectedRelationship(r.id);
                   }}
                 >
-                  <span style={{ fontWeight: 600 }}>
-                    {RELATIONSHIP_LABELS[r.type] || r.type}
-                  </span>
+                  <span style={{ fontWeight: 600 }}>{RELATIONSHIP_LABELS[r.type] || r.type}</span>
                   <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
                     {other?.label || otherId} · {r.confidence ?? '—'}%
                   </span>
@@ -305,22 +332,23 @@ export default function ObjectInspector() {
 
         {tab === 'history' && (
           <>
-            <p style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 8 }}>
-              {t('insp_history_hint')}
-            </p>
-            {history.slice(-15).reverse().map((h) => (
-              <div
-                key={h.id}
-                style={{
-                  padding: '6px 0',
-                  borderBottom: '1px solid var(--border)',
-                  fontSize: 11,
-                }}
-              >
-                <div style={{ color: 'var(--text)' }}>{h.label}</div>
-                <div style={{ color: 'var(--text-muted)' }}>{h.timestamp.slice(0, 19)}</div>
-              </div>
-            ))}
+            <p style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 8 }}>{t('insp_history_hint')}</p>
+            {history
+              .slice(-15)
+              .reverse()
+              .map((h) => (
+                <div
+                  key={h.id}
+                  style={{
+                    padding: '6px 0',
+                    borderBottom: '1px solid var(--border)',
+                    fontSize: 11,
+                  }}
+                >
+                  <div style={{ color: 'var(--text)' }}>{h.label}</div>
+                  <div style={{ color: 'var(--text-muted)' }}>{h.timestamp.slice(0, 19)}</div>
+                </div>
+              ))}
             {history.length === 0 && (
               <div style={{ color: 'var(--text-muted)' }}>{t('insp_no_history')}</div>
             )}
@@ -328,7 +356,7 @@ export default function ObjectInspector() {
         )}
       </div>
 
-      <div style={{ padding: 12, borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+      <div style={{ padding: 12, borderTop: '1px solid var(--border)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button type="button" className="btn btn-secondary" onClick={() => togglePinNode(entity.id)}>
           <Pin size={14} /> {pinnedNodeIds.includes(entity.id) ? t('insp_unpin') : t('insp_pin')}
         </button>
@@ -364,14 +392,17 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
       }}
     >
       <span style={{ color: 'var(--text-muted)' }}>{label}</span>
-      <span className={mono ? 'mono' : undefined} style={{ color: 'var(--text)', textAlign: 'right', wordBreak: 'break-all' }}>
+      <span
+        className={mono ? 'mono' : undefined}
+        style={{ color: 'var(--text)', textAlign: 'right', wordBreak: 'break-all' }}
+      >
         {value}
       </span>
     </div>
   );
 }
 
-const lbl: React.CSSProperties = {
+const lbl: CSSProperties = {
   display: 'block',
   fontSize: 11,
   fontWeight: 600,
@@ -380,7 +411,7 @@ const lbl: React.CSSProperties = {
   marginTop: 4,
 };
 
-const inp: React.CSSProperties = {
+const inp: CSSProperties = {
   width: '100%',
   padding: '7px 10px',
   background: 'var(--bg)',
