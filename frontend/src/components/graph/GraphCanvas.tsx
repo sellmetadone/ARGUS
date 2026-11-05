@@ -13,7 +13,7 @@ import {
   type Node,
   type Edge,
   type NodeChange,
-  type OnViewportChange,
+  type Viewport,
   BackgroundVariant,
   MarkerType,
 } from '@xyflow/react';
@@ -353,7 +353,7 @@ export default function GraphCanvas() {
     setSelectedRelationship,
   ]);
 
-  const onViewportChange: OnViewportChange = useCallback((vp) => {
+  const onViewportChange = useCallback((vp: Viewport) => {
     canvasEngine.setViewport({ x: vp.x, y: vp.y, zoom: vp.zoom });
   }, []);
 
