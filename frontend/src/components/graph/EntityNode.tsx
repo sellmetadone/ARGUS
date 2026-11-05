@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, type CSSProperties } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { ENTITY_COLORS, ENTITY_ICONS, type EntityType } from '../../types';
 import { useStore } from '../../store/useStore';
@@ -12,7 +12,7 @@ export interface EntityNodeData {
   [key: string]: unknown;
 }
 
-const handleStyle = (color: string): React.CSSProperties => ({
+const handleStyle = (color: string): CSSProperties => ({
   width: 8,
   height: 8,
   border: '2px solid var(--panel, #fff)',
@@ -22,11 +22,11 @@ const handleStyle = (color: string): React.CSSProperties => ({
 
 function EntityNode({ data, selected }: NodeProps) {
   const nodeData = data as EntityNodeData;
-  const appearance = useStore((s) => s.appearance);
-  const graphSettings = useStore((s) => s.graphSettings);
-  const color = appearance.entityColors?.[nodeData.entityType] || ENTITY_COLORS[nodeData.entityType] || '#64748b';
+  const entityColor = useStore((s) => s.appearance.entityColors?.[nodeData.entityType]);
+  const nodeSize = useStore((s) => s.graphSettings.nodeSize);
+  const color = entityColor || ENTITY_COLORS[nodeData.entityType] || '#64748b';
   const icon = ENTITY_ICONS[nodeData.entityType] || 'ITEM';
-  const scale = Math.max(0.8, Math.min(1.35, graphSettings.nodeSize || 1));
+  const scale = Math.max(0.8, Math.min(1.35, nodeSize || 1));
   const active = Boolean(selected || nodeData.selected || nodeData.highlighted);
   const title = String(nodeData.label || 'Untitled entity');
   const typeLabel = String(nodeData.entityType || 'entity').replace(/_/g, ' ');
@@ -34,10 +34,12 @@ function EntityNode({ data, selected }: NodeProps) {
   return (
     <article
       className={`argus-entity-node${active ? ' is-active' : ''}${nodeData.pinned ? ' is-pinned' : ''}`}
-      style={{
-        '--entity-accent': color,
-        '--node-scale': scale,
-      } as React.CSSProperties}
+      style={
+        {
+          '--entity-accent': color,
+          '--node-scale': scale,
+        } as CSSProperties
+      }
       title={title}
       aria-label={`${typeLabel}: ${title}`}
     >
@@ -52,7 +54,9 @@ function EntityNode({ data, selected }: NodeProps) {
 
       <div className="argus-node-accent" />
       <div className="argus-node-content">
-        <span className="argus-node-icon" aria-hidden="true">{icon}</span>
+        <span className="argus-node-icon" aria-hidden="true">
+          {icon}
+        </span>
         <div className="argus-node-copy">
           <span className="argus-node-type">{typeLabel}</span>
           <span className="argus-node-title">{title}</span>
@@ -63,4 +67,17 @@ function EntityNode({ data, selected }: NodeProps) {
   );
 }
 
-export default memo(EntityNode);
+function propsEqual(a: NodeProps, b: NodeProps): boolean {
+  if (a.selected !== b.selected) return false;
+  const da = a.data as EntityNodeData;
+  const db = b.data as EntityNodeData;
+  return (
+    da.label === db.label &&
+    da.entityType === db.entityType &&
+    da.selected === db.selected &&
+    da.highlighted === db.highlighted &&
+    da.pinned === db.pinned
+  );
+}
+
+export default memo(EntityNode, propsEqual);
