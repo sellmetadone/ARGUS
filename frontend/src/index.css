@@ -300,7 +300,7 @@ html, body, #root {
   }
 }
 
-/* ARGUS graph visual system — restrained light analytical canvas */
+/* ARGUS graph visual system v2 */
 .graph-surface {
   position: relative;
   isolation: isolate;
@@ -325,26 +325,37 @@ html, body, #root {
 .argus-flow .react-flow__edge-path {
   stroke-linecap: round;
   stroke-linejoin: round;
+  transition: stroke-width .14s ease, opacity .14s ease;
+  filter: drop-shadow(0 1px 1px rgba(20, 30, 45, .08));
 }
+.argus-flow .react-flow__edge:hover .react-flow__edge-path,
 .argus-flow .react-flow__edge.selected .react-flow__edge-path {
-  stroke: var(--accent) !important;
-  stroke-width: 2.4px !important;
+  stroke-width: 2.8px !important;
+  filter: drop-shadow(0 1px 3px rgba(50, 80, 120, .22));
 }
-.argus-flow .react-flow__edge-text {
-  font-size: 10px;
-  font-weight: 500;
-}
+.argus-flow .react-flow__edge-text { font-size: 10px; font-weight: 600; }
 .argus-flow .react-flow__edge-textbg {
   fill: var(--panel);
   fill-opacity: .96;
-  rx: 4px;
+  rx: 5px;
+  ry: 5px;
 }
+.argus-flow .react-flow__connection-path {
+  stroke: var(--accent);
+  stroke-width: 2.2px;
+  stroke-dasharray: 5 4;
+}
+.argus-flow .react-flow__handle-connecting {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.argus-flow .react-flow__handle-valid { background: #2f9a75 !important; }
 .argus-flow .react-flow__controls {
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 9px;
   background: var(--panel);
   box-shadow: 0 3px 12px rgba(28,39,52,.07);
+  backdrop-filter: blur(12px);
 }
 .argus-flow .react-flow__controls-button {
   width: 28px;
@@ -356,6 +367,7 @@ html, body, #root {
   overflow: hidden;
   border-radius: 10px !important;
   background: var(--panel) !important;
+  border: 1px solid var(--border);
   box-shadow: 0 3px 14px rgba(28,39,52,.07);
 }
 .argus-flow .react-flow__attribution { display: none; }
@@ -389,8 +401,8 @@ html, body, #root {
 .argus-node-accent {
   position: absolute;
   left: 0;
-  top: 9px;
-  bottom: 9px;
+  top: 11px;
+  bottom: 11px;
   width: 3px;
   border-radius: 0 3px 3px 0;
   background: var(--entity-accent);
@@ -400,7 +412,7 @@ html, body, #root {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 58px;
+  min-height: 64px;
   padding: 10px 12px 10px 14px;
 }
 .argus-node-icon {
@@ -413,16 +425,12 @@ html, body, #root {
   border-radius: 8px;
   color: var(--entity-accent);
   background: color-mix(in srgb, var(--entity-accent) 10%, var(--panel));
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: -.25px;
   border: 1px solid color-mix(in srgb, var(--entity-accent) 14%, transparent);
 }
 .argus-node-copy {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
   flex: 1;
 }
@@ -431,15 +439,26 @@ html, body, #root {
   font-size: 9px;
   line-height: 1.1;
   font-weight: 650;
-  letter-spacing: .075em;
+  letter-spacing: .095em;
   text-transform: uppercase;
 }
 .argus-node-title {
   overflow: hidden;
   color: var(--text);
-  font-size: 12px;
+  font-size: 12.5px;
   line-height: 1.35;
-  font-weight: 600;
+  font-weight: 650;
+  letter-spacing: -.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.argus-node-subtitle {
+  display: block;
+  max-width: 205px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -454,28 +473,50 @@ html, body, #root {
 }
 .argus-node-handle {
   opacity: 0;
-  transition: opacity .14s ease, transform .14s ease;
+  cursor: crosshair;
+  transition: opacity .14s ease, transform .14s ease, box-shadow .14s ease;
 }
 .argus-entity-node:hover .argus-node-handle,
-.argus-entity-node.is-active .argus-node-handle {
-  opacity: 1;
+.argus-entity-node.is-active .argus-node-handle,
+.react-flow__node.connecting .argus-node-handle,
+.react-flow__node.dragging .argus-node-handle { opacity: 1; }
+.argus-node-handle-source {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--entity-accent) 15%, transparent);
 }
-.argus-node-handle:hover { transform: scale(1.35); }
+.argus-node-handle-target { border-style: dashed !important; }
+.argus-node-handle:hover {
+  transform: scale(1.45);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--entity-accent) 16%, transparent);
+}
+.argus-node-port-hint {
+  position: absolute;
+  right: 8px;
+  bottom: -19px;
+  color: var(--text-muted);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: .13em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+.argus-entity-node:hover .argus-node-port-hint,
+.argus-entity-node.is-active .argus-node-port-hint { opacity: .72; }
 .react-flow__node:focus { outline: none; }
 .react-flow__node:focus-visible .argus-entity-node {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
-@media (max-width: 719px) {
-  .argus-entity-node { min-width: 154px; max-width: 210px; }
-  .argus-node-content { min-height: 52px; padding: 8px 10px 8px 12px; gap: 8px; }
-  .argus-node-icon { width: 30px; height: 30px; flex-basis: 30px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .argus-entity-node, .argus-node-handle { transition: none !important; }
-}
-
 .argus-flow .react-flow__edge.argus-edge-confirmed .react-flow__edge-path { stroke-linecap: round; }
 .argus-flow .react-flow__edge.argus-edge-assumed .react-flow__edge-path { stroke-dasharray: 5 4; }
 .argus-flow .react-flow__edge.argus-edge-unknown .react-flow__edge-path { opacity: .72; }
+
+@media (max-width: 719px) {
+  .argus-entity-node { min-width: 166px; max-width: 224px; }
+  .argus-node-content { min-height: 60px; padding: 9px 11px 9px 13px; }
+  .argus-node-subtitle { max-width: 155px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .argus-entity-node, .argus-node-handle, .argus-node-port-hint { transition: none !important; }
+}
