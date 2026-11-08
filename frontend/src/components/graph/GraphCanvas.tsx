@@ -27,6 +27,16 @@ import type { CanvasTool } from '../../canvas/engine';
 import { useTemporalFilter } from '../../store/temporalFilterStore';
 import { filterGraphByTemporalRange } from '../../services/intelligence/timelineService';
 
+function normalizeHandleId(raw: unknown): string | undefined {
+  if (typeof raw !== 'string' || !raw) return undefined;
+  // Legacy ids from visual pass v1: s-top / t-left → source-top / target-left
+  const m = raw.match(/^(s|t|source|target)-(top|right|bottom|left)$/);
+  if (!m) return raw;
+  const side = m[2];
+  const kind = m[1] === 's' || m[1] === 'source' ? 'source' : 'target';
+  return `${kind}-${side}`;
+}
+
 const nodeTypes = { entity: EntityNode } as const;
 const VALID_EDGE_TYPES = new Set(['default', 'straight', 'step', 'smoothstep', 'bezier', 'simplebezier']);
 
@@ -153,6 +163,14 @@ export default function GraphCanvas() {
       data: {
         label: e.label || e.id,
         entityType: e.type,
+        subtitle:
+          typeof e.properties?.description === 'string'
+            ? e.properties.description
+            : typeof e.properties?.platform === 'string'
+              ? e.properties.platform
+              : typeof e.properties?.value === 'string'
+                ? e.properties.value
+                : '',
         selected: e.id === selectedEntityId,
         highlighted: (highlightedPath || []).includes(e.id) || e.id === selectedEntityId,
         pinned: (pinnedNodeIds || []).includes(e.id),
@@ -175,16 +193,25 @@ export default function GraphCanvas() {
         const lineStyle = String(r.properties?.lineStyle || '');
         const direction = String(r.properties?.direction || 'forward');
         const statusRaw = String(r.properties?.status || 'unknown').toLowerCase();
-        const status = statusRaw === 'confirmed' ? 'confirmed' : (statusRaw === 'assumed' || statusRaw === 'suspected') ? 'assumed' : 'unknown';
-        const dashed = variant === 'dashed' || lineStyle === 'dashed' || status === 'assumed' || status === 'unknown';
+        const status =
+          statusRaw === 'confirmed'
+            ? 'confirmed'
+            : statusRaw === 'assumed' || statusRaw === 'suspected'
+              ? 'assumed'
+              : 'unknown';
+        const dashed =
+          variant === 'dashed' || lineStyle === 'dashed' || status === 'assumed' || status === 'unknown';
         const animated = variant === 'animated' || lineStyle === 'animated' || inPath;
-        const statusColor = status === 'confirmed' ? '#36856d' : status === 'assumed' ? '#c28a38' : stroke;
+        const statusColor =
+          status === 'confirmed' ? '#36856d' : status === 'assumed' ? '#c28a38' : stroke;
         const color = inPath ? accent : statusColor;
         return {
           id: String(r.id),
           className: `argus-edge argus-edge-${status}`,
           source: String(r.sourceId),
           target: String(r.targetId),
+          sourceHandle: normalizeHandleId(r.properties?.sourceHandle),
+          targetHandle: normalizeHandleId(r.properties?.targetHandle),
           label: graphSettings.showLabels ? RELATIONSHIP_LABELS[r.type] || r.type : undefined,
           type: edgeType === 'simplebezier' ? 'default' : edgeType,
           animated: device.reduceMotion ? false : animated,
@@ -195,7 +222,12 @@ export default function GraphCanvas() {
           },
           labelStyle: { fill: '#777B80', fontSize: 10, fontWeight: 500 },
           labelBgStyle: {
-            fill: appearance.theme === 'dark' ? '#151b22' : appearance.theme === 'amoled' ? '#0a0a0a' : '#ffffff',
+            fill:
+              appearance.theme === 'dark'
+                ? '#151b22'
+                : appearance.theme === 'amoled'
+                  ? '#0a0a0a'
+                  : '#ffffff',
             fillOpacity: 0.96,
           },
           markerEnd: { type: MarkerType.ArrowClosed, color, width: 16, height: 16 },
@@ -396,6 +428,8 @@ export default function GraphCanvas() {
               width: 16,
               height: 16,
             },
+            sourceHandle: params.sourceHandle || undefined,
+            targetHandle: params.targetHandle || undefined,
           },
           eds
         )
