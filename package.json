@@ -1,20 +1,12 @@
 {
-  "name": "argus-root",
+  "name": "argus-monorepo",
   "private": true,
   "version": "0.1.0",
-  "description": "ARGUS monorepo root — proxies scripts into frontend/",
-  "author": "sellmetadone",
-  "homepage": "https://t.me/argus_platform",
+  "license": "MIT",
+  "description": "ARGUS OSINT platform",
   "scripts": {
-    "postinstall": "npm install --prefix frontend --no-fund --no-audit",
     "dev": "npm run dev --prefix frontend",
     "build": "npm run build --prefix frontend",
-    "preview": "npm run preview --prefix frontend",
-    "argus": "npm run argus --prefix frontend",
-    "cli": "npm run cli --prefix frontend",
-    "start": "npm run start --prefix frontend",
-    "both": "npm run both --prefix frontend",
-    "typecheck": "npm run typecheck --prefix frontend",
-    "install:app": "npm install --prefix frontend --no-fund --no-audit"
+    "typecheck": "npm run typecheck --prefix frontend"
   }
 }
