@@ -1,6 +1,7 @@
 import {
   createInitialCanvasState,
   DEFAULT_LAYER,
+  type AlignMode,
   type CanvasEngineState,
   type CanvasLayer,
   type CanvasObject,
@@ -17,8 +18,8 @@ export type EntityMirror = {
 };
 
 /**
- * In-memory CanvasEngine — layout mirror + layers + notes + lightweight history.
- * React Flow remains the primary graph renderer.
+ * In-memory CanvasEngine — layout mirror + layers + notes/frames/groups + history.
+ * React Flow remains the primary graph renderer for entities.
  */
 export class CanvasEngine {
   private state: CanvasEngineState;
@@ -152,6 +153,166 @@ export class CanvasEngine {
     return obj;
   }
 
+  addText(x: number, y: number, text: string) {
+    const layerId = this.state.layers[0]?.id || DEFAULT_LAYER.id;
+    const obj: CanvasObject = {
+      id: `text-${Date.now()}`,
+      kind: 'text',
+      layerId,
+      x,
+      y,
+      label: text,
+      width: 200,
+      height: 32,
+    };
+    this.state = { ...this.state, objects: [...this.state.objects, obj] };
+    this.checkpoint();
+    this.emit();
+    return obj;
+  }
+
+  addFrame(x: number, y: number, width = 320, height = 220, label = 'Frame') {
+    const layerId = this.state.layers[0]?.id || DEFAULT_LAYER.id;
+    const obj: CanvasObject = {
+      id: `frame-${Date.now()}`,
+      kind: 'frame',
+      layerId,
+      x,
+      y,
+      width,
+      height,
+      label,
+      color: '#526C8C',
+    };
+    this.state = { ...this.state, objects: [...this.state.objects, obj] };
+    this.checkpoint();
+    this.emit();
+    return obj;
+  }
+
+  updateObject(id: string, patch: Partial<CanvasObject>) {
+    this.state = {
+      ...this.state,
+      objects: this.state.objects.map((o) => (o.id === id ? { ...o, ...patch } : o)),
+    };
+    this.checkpoint();
+    this.emit();
+  }
+
+  removeObject(id: string) {
+    this.state = {
+      ...this.state,
+      objects: this.state.objects.filter((o) => o.id !== id),
+      selectedIds: this.state.selectedIds.filter((sid) => sid !== id),
+    };
+    this.checkpoint();
+    this.emit();
+  }
+
+  groupSelected(memberEntityIds: string[], label = 'Group'): CanvasObject | null {
+    if (memberEntityIds.length < 2) return null;
+    const entities = this.state.objects.filter(
+      (o) => o.kind === 'entity' && o.entityId && memberEntityIds.includes(o.entityId)
+    );
+    if (entities.length < 2) return null;
+    const minX = Math.min(...entities.map((e) => e.x));
+    const minY = Math.min(...entities.map((e) => e.y));
+    const maxX = Math.max(...entities.map((e) => e.x + (e.width || 180)));
+    const maxY = Math.max(...entities.map((e) => e.y + (e.height || 72)));
+    const layerId = this.state.layers[0]?.id || DEFAULT_LAYER.id;
+    const group: CanvasObject = {
+      id: `group-${Date.now()}`,
+      kind: 'group',
+      layerId,
+      x: minX - 16,
+      y: minY - 28,
+      width: maxX - minX + 32,
+      height: maxY - minY + 44,
+      label,
+      memberIds: [...memberEntityIds],
+      color: '#64748b',
+    };
+    this.state = { ...this.state, objects: [...this.state.objects, group] };
+    this.checkpoint();
+    this.emit();
+    return group;
+  }
+
+  ungroup(groupId: string) {
+    this.state = {
+      ...this.state,
+      objects: this.state.objects.filter((o) => o.id !== groupId),
+      selectedIds: this.state.selectedIds.filter((id) => id !== groupId),
+    };
+    this.checkpoint();
+    this.emit();
+  }
+
+  computeAlign(
+    items: { id: string; x: number; y: number; width?: number; height?: number }[],
+    mode: AlignMode
+  ): Record<string, { x: number; y: number }> {
+    if (items.length < 2) return {};
+    const w = (it: (typeof items)[0]) => it.width ?? 180;
+    const h = (it: (typeof items)[0]) => it.height ?? 72;
+    const result: Record<string, { x: number; y: number }> = {};
+
+    if (mode === 'left') {
+      const v = Math.min(...items.map((i) => i.x));
+      items.forEach((i) => {
+        result[i.id] = { x: v, y: i.y };
+      });
+    } else if (mode === 'right') {
+      const v = Math.max(...items.map((i) => i.x + w(i)));
+      items.forEach((i) => {
+        result[i.id] = { x: v - w(i), y: i.y };
+      });
+    } else if (mode === 'center') {
+      const minX = Math.min(...items.map((i) => i.x));
+      const maxX = Math.max(...items.map((i) => i.x + w(i)));
+      const mid = (minX + maxX) / 2;
+      items.forEach((i) => {
+        result[i.id] = { x: mid - w(i) / 2, y: i.y };
+      });
+    } else if (mode === 'top') {
+      const v = Math.min(...items.map((i) => i.y));
+      items.forEach((i) => {
+        result[i.id] = { x: i.x, y: v };
+      });
+    } else if (mode === 'bottom') {
+      const v = Math.max(...items.map((i) => i.y + h(i)));
+      items.forEach((i) => {
+        result[i.id] = { x: i.x, y: v - h(i) };
+      });
+    } else if (mode === 'middle') {
+      const minY = Math.min(...items.map((i) => i.y));
+      const maxY = Math.max(...items.map((i) => i.y + h(i)));
+      const mid = (minY + maxY) / 2;
+      items.forEach((i) => {
+        result[i.id] = { x: i.x, y: mid - h(i) / 2 };
+      });
+    } else if (mode === 'distribute-h') {
+      const sorted = [...items].sort((a, b) => a.x - b.x);
+      const first = sorted[0];
+      const last = sorted[sorted.length - 1];
+      const span = last.x - first.x;
+      const step = span / (sorted.length - 1);
+      sorted.forEach((i, idx) => {
+        result[i.id] = { x: first.x + step * idx, y: i.y };
+      });
+    } else if (mode === 'distribute-v') {
+      const sorted = [...items].sort((a, b) => a.y - b.y);
+      const first = sorted[0];
+      const last = sorted[sorted.length - 1];
+      const span = last.y - first.y;
+      const step = span / (sorted.length - 1);
+      sorted.forEach((i, idx) => {
+        result[i.id] = { x: i.x, y: first.y + step * idx };
+      });
+    }
+    return result;
+  }
+
   syncEntities(entities: EntityMirror[]) {
     const layerId = this.state.layers[0]?.id || DEFAULT_LAYER.id;
     const nonEntity = this.state.objects.filter((o) => o.kind !== 'entity');
@@ -166,6 +327,8 @@ export class CanvasEngine {
         y: e.y,
         label: e.label,
         locked: e.locked,
+        width: 180,
+        height: 72,
       })),
     ];
     this.state = {
@@ -195,6 +358,8 @@ export class CanvasEngine {
           x,
           y,
           label,
+          width: 180,
+          height: 72,
         },
       ];
     }
@@ -218,6 +383,10 @@ export class CanvasEngine {
 
   getObjectByEntityId(entityId: string): CanvasObject | undefined {
     return this.state.objects.find((o) => o.entityId === entityId);
+  }
+
+  getWhiteboardObjects(): CanvasObject[] {
+    return this.state.objects.filter((o) => o.kind === 'frame' || o.kind === 'note' || o.kind === 'text' || o.kind === 'group');
   }
 }
 
