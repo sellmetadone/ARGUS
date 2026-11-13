@@ -1,30 +1,25 @@
 # ARGUS — status
 
-## PARTIALLY READY
+## PARTIALLY READY → Whiteboard pass (2026-11)
 
-### 2026-11-02 batch
+### Done
+- **Whiteboard:** frames, notes, text, groups; multi-select (Shift + drag); align / distribute bar
+- **CanvasEngine:** addFrame, groupSelected, computeAlign, whiteboard objects layer
+- **Visual v2 graph:** Lucide cards, source/target ports, handle persistence
+- **Map:** OSM embed + multi-point list, fit all, open OSM
+- **No demo flash,** Inspector hooks fix, Viewport typecheck
+- **License:** MIT
 
-- **No demo flash:** Zustand initializes via `bootstrapAppState()` / `getInitialCaseData()` at create time
-- **Map:** `MapPanel` — OSM embed + entity list with lat/lng properties (no Leaflet dep)
-- **CanvasEngine:** layers, notes, undo/redo canvas history; still mirrors React Flow for entities
-- **CI:** `.github/workflows/ci.yml` — typecheck + production build on Ubuntu + Windows; E2E smoke on Windows (Playwright)
-- **Scripts:** `npm run build` = typecheck + vite build; `npm run test:e2e`
-
-### Verify locally
-
+### Verify
 ```bash
 cd frontend
 npm install
 npm run typecheck
 npm run build
-npm run preview
-# optional:
-npx playwright install chromium
-npm run test:e2e
+npm run dev
 ```
 
-### Remaining
-
-- Full whiteboard (frames, multi-select align) beyond engine scaffold
-- Map is OSM embed, not interactive vector layers
-- package-lock may need refresh after playwright add (`npm install`)
+### Remaining (lower priority)
+- CanvasEngine as sole interaction engine (still mirrors React Flow)
+- Full Leaflet vector map
+- Graph3D polish, bundle code-split

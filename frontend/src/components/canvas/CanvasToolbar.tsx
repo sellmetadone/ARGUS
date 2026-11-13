@@ -1,14 +1,15 @@
-import { MousePointer2, Hand, Square, Link2, StickyNote, Type } from 'lucide-react';
+import { MousePointer2, Hand, Square, Link2, StickyNote, Type, Frame } from 'lucide-react';
 import { useStore, type CanvasTool } from '../../store/useStore';
 import { useT } from '../../i18n/useT';
 
 const TOOLS: { id: CanvasTool; icon: React.ReactNode; labelKey: string }[] = [
-  { id: 'select', icon: <MousePointer2 size={16} />, labelKey: 'tool_select' },
-  { id: 'hand', icon: <Hand size={16} />, labelKey: 'tool_hand' },
-  { id: 'node', icon: <Square size={16} />, labelKey: 'tool_node' },
-  { id: 'connect', icon: <Link2 size={16} />, labelKey: 'tool_connect' },
-  { id: 'note', icon: <StickyNote size={16} />, labelKey: 'tool_note' },
-  { id: 'text', icon: <Type size={16} />, labelKey: 'tool_text' },
+  { id: 'select', icon: <MousePointer2 size={16} />, labelKey: 'select' },
+  { id: 'hand', icon: <Hand size={16} />, labelKey: 'hand' },
+  { id: 'node', icon: <Square size={16} />, labelKey: 'create_entity' },
+  { id: 'connect', icon: <Link2 size={16} />, labelKey: 'connect' },
+  { id: 'frame', icon: <Frame size={16} />, labelKey: 'wb_frame' },
+  { id: 'note', icon: <StickyNote size={16} />, labelKey: 'notes' },
+  { id: 'text', icon: <Type size={16} />, labelKey: 'wb_text' },
 ];
 
 export default function CanvasToolbar() {

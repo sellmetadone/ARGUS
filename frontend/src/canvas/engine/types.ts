@@ -3,7 +3,7 @@
  * Case data remains in Zustand; engine mirrors layout/selection/viewport for tools.
  */
 
-export type CanvasTool = 'select' | 'hand' | 'node' | 'connect' | 'note' | 'text';
+export type CanvasTool = 'select' | 'hand' | 'node' | 'connect' | 'note' | 'text' | 'frame';
 
 export type CanvasViewport = {
   x: number;
@@ -32,7 +32,20 @@ export type CanvasObject = {
   height?: number;
   label?: string;
   locked?: boolean;
+  /** member entity ids when kind === 'group' */
+  memberIds?: string[];
+  color?: string;
 };
+
+export type AlignMode =
+  | 'left'
+  | 'center'
+  | 'right'
+  | 'top'
+  | 'middle'
+  | 'bottom'
+  | 'distribute-h'
+  | 'distribute-v';
 
 export type CanvasEngineState = {
   caseId: string | null;
