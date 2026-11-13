@@ -16,6 +16,7 @@ import {
   type Viewport,
   BackgroundVariant,
   MarkerType,
+  SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import EntityNode from './EntityNode';
@@ -29,7 +30,6 @@ import { filterGraphByTemporalRange } from '../../services/intelligence/timeline
 
 function normalizeHandleId(raw: unknown): string | undefined {
   if (typeof raw !== 'string' || !raw) return undefined;
-  // Legacy ids from visual pass v1: s-top / t-left → source-top / target-left
   const m = raw.match(/^(s|t|source|target)-(top|right|bottom|left)$/);
   if (!m) return raw;
   const side = m[2];
@@ -51,6 +51,7 @@ export default function GraphCanvas() {
   const selectedEntityId = useStore((s) => s.selectedEntityId);
   const selectedRelationshipId = useStore((s) => s.selectedRelationshipId);
   const setSelectedEntity = useStore((s) => s.setSelectedEntity);
+  const setSelectedEntities = useStore((s) => s.setSelectedEntities);
   const setSelectedRelationship = useStore((s) => s.setSelectedRelationship);
   const highlightedPath = useStore((s) => s.highlightedPath);
   const graphSearchQuery = useStore((s) => s.graphSearchQuery);
@@ -121,15 +122,7 @@ export default function GraphCanvas() {
         appearance.accentColor,
         appearance.edgeColor,
       ].join('|'),
-    [
-      pathKey,
-      edgeType,
-      graphSettings.edgeVariant,
-      graphSettings.edgeThickness,
-      graphSettings.showLabels,
-      appearance.accentColor,
-      appearance.edgeColor,
-    ]
+    [pathKey, edgeType, graphSettings.edgeVariant, graphSettings.edgeThickness, graphSettings.showLabels, appearance.accentColor, appearance.edgeColor]
   );
   const structureKey = useMemo(() => {
     const rids = relationships
@@ -140,17 +133,9 @@ export default function GraphCanvas() {
     return `${activeCaseId}|${filteredIdKey}|${rids}|${temporalKey}`;
   }, [activeCaseId, filteredIdKey, relationships, filteredIds, temporalKey]);
 
-  useEffect(() => {
-    canvasEngine.setCase(activeCaseId);
-  }, [activeCaseId]);
-
-  useEffect(() => {
-    canvasEngine.setTool(canvasTool as CanvasTool);
-  }, [canvasTool]);
-
-  useEffect(() => {
-    canvasEngine.select(selectedEntityId ? [selectedEntityId] : []);
-  }, [selectedEntityId]);
+  useEffect(() => { canvasEngine.setCase(activeCaseId); }, [activeCaseId]);
+  useEffect(() => { canvasEngine.setTool(canvasTool as CanvasTool); }, [canvasTool]);
+  useEffect(() => { canvasEngine.select(selectedEntityId ? [selectedEntityId] : []); }, [selectedEntityId]);
 
   const makeNodes = useCallback((): Node[] => {
     return filteredEntities.map((e, i) => ({
@@ -199,11 +184,9 @@ export default function GraphCanvas() {
             : statusRaw === 'assumed' || statusRaw === 'suspected'
               ? 'assumed'
               : 'unknown';
-        const dashed =
-          variant === 'dashed' || lineStyle === 'dashed' || status === 'assumed' || status === 'unknown';
+        const dashed = variant === 'dashed' || lineStyle === 'dashed' || status === 'assumed' || status === 'unknown';
         const animated = variant === 'animated' || lineStyle === 'animated' || inPath;
-        const statusColor =
-          status === 'confirmed' ? '#36856d' : status === 'assumed' ? '#c28a38' : stroke;
+        const statusColor = status === 'confirmed' ? '#36856d' : status === 'assumed' ? '#c28a38' : stroke;
         const color = inPath ? accent : statusColor;
         return {
           id: String(r.id),
@@ -215,19 +198,10 @@ export default function GraphCanvas() {
           label: graphSettings.showLabels ? RELATIONSHIP_LABELS[r.type] || r.type : undefined,
           type: edgeType === 'simplebezier' ? 'default' : edgeType,
           animated: device.reduceMotion ? false : animated,
-          style: {
-            stroke: color,
-            strokeWidth: width,
-            strokeDasharray: dashed ? '6 4' : undefined,
-          },
+          style: { stroke: color, strokeWidth: width, strokeDasharray: dashed ? '6 4' : undefined },
           labelStyle: { fill: '#777B80', fontSize: 10, fontWeight: 500 },
           labelBgStyle: {
-            fill:
-              appearance.theme === 'dark'
-                ? '#151b22'
-                : appearance.theme === 'amoled'
-                  ? '#0a0a0a'
-                  : '#ffffff',
+            fill: appearance.theme === 'dark' ? '#151b22' : appearance.theme === 'amoled' ? '#0a0a0a' : '#ffffff',
             fillOpacity: 0.96,
           },
           markerEnd: { type: MarkerType.ArrowClosed, color, width: 16, height: 16 },
@@ -237,19 +211,7 @@ export default function GraphCanvas() {
               : undefined,
         } as Edge;
       });
-  }, [
-    relationships,
-    filteredIds,
-    highlightedPath,
-    graphSettings.edgeVariant,
-    graphSettings.edgeThickness,
-    graphSettings.showLabels,
-    appearance.accentColor,
-    appearance.edgeColor,
-    appearance.theme,
-    edgeType,
-    device.reduceMotion,
-  ]);
+  }, [relationships, filteredIds, highlightedPath, graphSettings.edgeVariant, graphSettings.edgeThickness, graphSettings.showLabels, appearance.accentColor, appearance.edgeColor, appearance.theme, edgeType, device.reduceMotion]);
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -277,18 +239,7 @@ export default function GraphCanvas() {
         locked: (pinnedNodeIds || []).includes(n.id),
       }))
     );
-  }, [
-    structureKey,
-    styleKey,
-    selectedEntityId,
-    pathKey,
-    pinKey,
-    makeNodes,
-    makeEdges,
-    setNodes,
-    setEdges,
-    pinnedNodeIds,
-  ]);
+  }, [structureKey, styleKey, selectedEntityId, pathKey, pinKey, makeNodes, makeEdges, setNodes, setEdges, pinnedNodeIds]);
 
   useEffect(() => {
     if (prevStructure.current !== structureKey) return;
@@ -375,15 +326,7 @@ export default function GraphCanvas() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [
-    selectedEntityId,
-    selectedRelationshipId,
-    pinnedNodeIds,
-    removeEntity,
-    removeRelationship,
-    setSelectedEntity,
-    setSelectedRelationship,
-  ]);
+  }, [selectedEntityId, selectedRelationshipId, pinnedNodeIds, removeEntity, removeRelationship, setSelectedEntity, setSelectedRelationship]);
 
   const onViewportChange = useCallback((vp: Viewport) => {
     canvasEngine.setViewport({ x: vp.x, y: vp.y, zoom: vp.zoom });
@@ -422,12 +365,7 @@ export default function GraphCanvas() {
               stroke: appearance.edgeColor || '#94a3b8',
               strokeDasharray: graphSettings.edgeVariant === 'dashed' ? '6 4' : undefined,
             },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: appearance.edgeColor || '#94a3b8',
-              width: 16,
-              height: 16,
-            },
+            markerEnd: { type: MarkerType.ArrowClosed, color: appearance.edgeColor || '#94a3b8', width: 16, height: 16 },
             sourceHandle: params.sourceHandle || undefined,
             targetHandle: params.targetHandle || undefined,
           },
@@ -435,15 +373,16 @@ export default function GraphCanvas() {
         )
       );
     },
-    [
-      activeCaseId,
-      addRelationship,
-      setEdges,
-      graphSettings.edgeVariant,
-      appearance.edgeColor,
-      edgeType,
-      device.reduceMotion,
-    ]
+    [activeCaseId, addRelationship, setEdges, graphSettings.edgeVariant, appearance.edgeColor, edgeType, device.reduceMotion]
+  );
+
+  const onSelectionChange = useCallback(
+    ({ nodes: selNodes }: { nodes: Node[] }) => {
+      const ids = selNodes.map((n) => n.id);
+      setSelectedEntities(ids);
+      canvasEngine.select(ids);
+    },
+    [setSelectedEntities]
   );
 
   const onNodeClick = useCallback(
@@ -459,9 +398,10 @@ export default function GraphCanvas() {
   );
   const onPaneClick = useCallback(() => {
     setSelectedEntity(null);
+    setSelectedEntities([]);
     useStore.getState().setHighlightedPath([]);
     canvasEngine.select([]);
-  }, [setSelectedEntity]);
+  }, [setSelectedEntity, setSelectedEntities]);
 
   const onPaneDoubleClick = useCallback(
     (event: React.MouseEvent) => {
@@ -531,6 +471,7 @@ export default function GraphCanvas() {
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
         onConnect={onConnect}
+        onSelectionChange={onSelectionChange}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
         onPaneClick={onPaneClick}
@@ -546,6 +487,9 @@ export default function GraphCanvas() {
         defaultEdgeOptions={{ type: 'smoothstep' }}
         panOnDrag={panOnDrag}
         selectionOnDrag={canvasTool === 'select'}
+        selectionMode={SelectionMode.Partial}
+        multiSelectionKeyCode="Shift"
+        selectNodesOnDrag={canvasTool === 'select'}
         nodesDraggable={canvasTool !== 'hand'}
         nodesConnectable={canvasTool === 'connect' || canvasTool === 'select'}
         deleteKeyCode={null}
@@ -586,9 +530,7 @@ export default function GraphCanvas() {
               if (!t) return '#94a3b8';
               return appearance.entityColors?.[t] || ENTITY_COLORS[t] || '#94a3b8';
             }}
-            maskColor={
-              appearance.theme === 'light' ? 'rgba(247,247,245,0.7)' : 'rgba(15,23,42,0.8)'
-            }
+            maskColor={appearance.theme === 'light' ? 'rgba(247,247,245,0.7)' : 'rgba(15,23,42,0.8)'}
           />
         )}
       </ReactFlow>
