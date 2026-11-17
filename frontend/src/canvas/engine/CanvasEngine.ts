@@ -1,12 +1,14 @@
 import {
   createInitialCanvasState,
   DEFAULT_LAYER,
+  STICKY_PALETTE,
   type AlignMode,
   type CanvasEngineState,
   type CanvasLayer,
   type CanvasObject,
   type CanvasTool,
   type CanvasViewport,
+  type ShapeVariant,
 } from './types';
 
 export type EntityMirror = {
@@ -18,8 +20,8 @@ export type EntityMirror = {
 };
 
 /**
- * In-memory CanvasEngine — layout mirror + layers + notes/frames/groups + history.
- * React Flow remains the primary graph renderer for entities.
+ * ARGUS CanvasEngine — single class for board layout, whiteboard objects, history.
+ * React Flow remains the entity graph renderer; this engine mirrors layout + board tools.
  */
 export class CanvasEngine {
   private state: CanvasEngineState;
@@ -79,6 +81,9 @@ export class CanvasEngine {
       ...createInitialCanvasState(caseId),
       tool: this.state.tool,
       viewport: this.state.viewport,
+      drawColor: this.state.drawColor,
+      drawWidth: this.state.drawWidth,
+      shapeVariant: this.state.shapeVariant,
     };
     this.checkpoint();
     this.emit();
@@ -135,7 +140,17 @@ export class CanvasEngine {
     this.emit();
   }
 
-  addNote(x: number, y: number, text: string) {
+  setDrawStyle(partial: { color?: string; width?: number; shape?: ShapeVariant }) {
+    this.state = {
+      ...this.state,
+      drawColor: partial.color ?? this.state.drawColor,
+      drawWidth: partial.width ?? this.state.drawWidth,
+      shapeVariant: partial.shape ?? this.state.shapeVariant,
+    };
+    this.emit();
+  }
+
+  addNote(x: number, y: number, text: string, color?: string) {
     const layerId = this.state.layers[0]?.id || DEFAULT_LAYER.id;
     const obj: CanvasObject = {
       id: `note-${Date.now()}`,
@@ -145,7 +160,8 @@ export class CanvasEngine {
       y,
       label: text,
       width: 180,
-      height: 80,
+      height: 96,
+      color: color || STICKY_PALETTE[Math.floor(Math.random() * STICKY_PALETTE.length)],
     };
     this.state = { ...this.state, objects: [...this.state.objects, obj] };
     this.checkpoint();
@@ -188,6 +204,94 @@ export class CanvasEngine {
     this.checkpoint();
     this.emit();
     return obj;
+  }
+
+  addShape(
+    x: number,
+    y: number,
+    width = 160,
+    height = 100,
+    shape?: ShapeVariant,
+    label = ''
+  ) {
+    const layerId = this.state.layers[0]?.id || DEFAULT_LAYER.id;
+    const obj: CanvasObject = {
+      id: `shape-${Date.now()}`,
+      kind: 'shape',
+      layerId,
+      x,
+      y,
+      width,
+      height,
+      shape: shape || this.state.shapeVariant,
+      label,
+      color: this.state.drawColor,
+      opacity: 0.92,
+    };
+    this.state = { ...this.state, objects: [...this.state.objects, obj] };
+    this.checkpoint();
+    this.emit();
+    return obj;
+  }
+
+  addStamp(x: number, y: number, label: string) {
+    const layerId = this.state.layers[0]?.id || DEFAULT_LAYER.id;
+    const obj: CanvasObject = {
+      id: `stamp-${Date.now()}`,
+      kind: 'stamp',
+      layerId,
+      x,
+      y,
+      width: 120,
+      height: 36,
+      label,
+      color: this.state.drawColor,
+    };
+    this.state = { ...this.state, objects: [...this.state.objects, obj] };
+    this.checkpoint();
+    this.emit();
+    return obj;
+  }
+
+  beginStroke(x: number, y: number): string {
+    const layerId = this.state.layers[0]?.id || DEFAULT_LAYER.id;
+    const id = `stroke-${Date.now()}`;
+    const obj: CanvasObject = {
+      id,
+      kind: 'stroke',
+      layerId,
+      x,
+      y,
+      points: [{ x, y }],
+      color: this.state.drawColor,
+      strokeWidth: this.state.drawWidth,
+    };
+    this.state = { ...this.state, objects: [...this.state.objects, obj] };
+    this.emit();
+    return id;
+  }
+
+  appendStrokePoint(id: string, x: number, y: number) {
+    this.state = {
+      ...this.state,
+      objects: this.state.objects.map((o) => {
+        if (o.id !== id || o.kind !== 'stroke' || !o.points) return o;
+        const last = o.points[o.points.length - 1];
+        if (last && Math.hypot(last.x - x, last.y - y) < 1.5) return o;
+        return { ...o, points: [...o.points, { x, y }] };
+      }),
+    };
+    this.emit();
+  }
+
+  endStroke(id: string) {
+    const o = this.state.objects.find((x) => x.id === id);
+    if (!o || !o.points || o.points.length < 2) {
+      this.removeObject(id);
+      return;
+    }
+    this.checkpoint();
+    this.emit();
   }
 
   updateObject(id: string, patch: Partial<CanvasObject>) {
@@ -293,24 +397,87 @@ export class CanvasEngine {
       });
     } else if (mode === 'distribute-h') {
       const sorted = [...items].sort((a, b) => a.x - b.x);
-      const first = sorted[0];
-      const last = sorted[sorted.length - 1];
-      const span = last.x - first.x;
-      const step = span / (sorted.length - 1);
-      sorted.forEach((i, idx) => {
-        result[i.id] = { x: first.x + step * idx, y: i.y };
+      const minX = sorted[0].x;
+      const maxX = sorted[sorted.length - 1].x + w(sorted[sorted.length - 1]);
+      const totalW = sorted.reduce((s, i) => s + w(i), 0);
+      const gap = (maxX - minX - totalW) / (sorted.length - 1);
+      let cursor = minX;
+      sorted.forEach((i) => {
+        result[i.id] = { x: cursor, y: i.y };
+        cursor += w(i) + gap;
       });
     } else if (mode === 'distribute-v') {
       const sorted = [...items].sort((a, b) => a.y - b.y);
-      const first = sorted[0];
-      const last = sorted[sorted.length - 1];
-      const span = last.y - first.y;
-      const step = span / (sorted.length - 1);
-      sorted.forEach((i, idx) => {
-        result[i.id] = { x: i.x, y: first.y + step * idx };
+      const minY = sorted[0].y;
+      const maxY = sorted[sorted.length - 1].y + h(sorted[sorted.length - 1]);
+      const totalH = sorted.reduce((s, i) => s + h(i), 0);
+      const gap = (maxY - minY - totalH) / (sorted.length - 1);
+      let cursor = minY;
+      sorted.forEach((i) => {
+        result[i.id] = { x: i.x, y: cursor };
+        cursor += h(i) + gap;
       });
     }
     return result;
+  }
+
+  bringToFront(id: string) {
+    const obj = this.state.objects.find((o) => o.id === id);
+    if (!obj) return;
+    this.state = {
+      ...this.state,
+      objects: [...this.state.objects.filter((o) => o.id !== id), obj],
+    };
+    this.emit();
+  }
+
+  sendToBack(id: string) {
+    const obj = this.state.objects.find((o) => o.id === id);
+    if (!obj) return;
+    this.state = {
+      ...this.state,
+      objects: [obj, ...this.state.objects.filter((o) => o.id !== id)],
+    };
+    this.emit();
+  }
+
+  clearWhiteboard() {
+    this.state = {
+      ...this.state,
+      objects: this.state.objects.filter((o) => o.kind === 'entity'),
+      selectedIds: [],
+    };
+    this.checkpoint();
+    this.emit();
+  }
+
+  exportWhiteboardJSON(): string {
+    return JSON.stringify(
+      { version: 1, objects: this.getWhiteboardObjects(), layers: this.state.layers },
+      null,
+      2
+    );
+  }
+
+  importWhiteboardJSON(raw: string): boolean {
+    try {
+      const data = JSON.parse(raw);
+      if (!Array.isArray(data.objects)) return false;
+      const layerId = this.state.layers[0]?.id || DEFAULT_LAYER.id;
+      const imported = data.objects
+        .filter((o: CanvasObject) => o && o.kind && o.kind !== 'entity')
+        .map((o: CanvasObject) => ({
+          ...o,
+          id: `${o.kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          layerId: o.layerId || layerId,
+        }));
+      this.state = { ...this.state, objects: [...this.state.objects, ...imported] };
+      this.checkpoint();
+      this.emit();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   syncEntities(entities: EntityMirror[]) {
@@ -331,11 +498,7 @@ export class CanvasEngine {
         height: 72,
       })),
     ];
-    this.state = {
-      ...this.state,
-      objects,
-      entityCount: entities.length,
-    };
+    this.state = { ...this.state, objects, entityCount: entities.length };
     this.emit();
   }
 
@@ -386,7 +549,9 @@ export class CanvasEngine {
   }
 
   getWhiteboardObjects(): CanvasObject[] {
-    return this.state.objects.filter((o) => o.kind === 'frame' || o.kind === 'note' || o.kind === 'text' || o.kind === 'group');
+    return this.state.objects.filter((o) =>
+      ['frame', 'note', 'text', 'group', 'shape', 'stroke', 'stamp'].includes(o.kind)
+    );
   }
 }
 

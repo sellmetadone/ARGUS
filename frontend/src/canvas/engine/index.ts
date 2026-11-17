@@ -12,4 +12,3 @@ export {
   type CanvasViewport,
   type ShapeVariant,
 } from './types';
-import './boardAPI';
