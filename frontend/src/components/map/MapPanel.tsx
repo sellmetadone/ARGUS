@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { Map as MapIcon, X, Crosshair, Maximize2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useT } from '../../i18n/useT';
@@ -12,7 +12,6 @@ function parseCoord(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Parse lat/lng from common property aliases and "lat,lng" strings. */
 function extractPoint(
   id: string,
   label: string,
@@ -36,12 +35,14 @@ function extractPoint(
   return { id, label, lat, lng };
 }
 
-/** Geospatial panel — OSM embed + entity list. No Leaflet dependency. */
 export default function MapPanel() {
   const t = useT();
   const activeCaseId = useStore((s) => s.activeCaseId);
   const entities = useStore((s) => s.entities);
   const setSelectedEntity = useStore((s) => s.setSelectedEntity);
+  const setHighlightedPath = useStore((s) => s.setHighlightedPath);
+  const selectedEntityId = useStore((s) => s.selectedEntityId);
+  const relationships = useStore((s) => s.relationships);
   const setPanel = useStore((s) => s.setPanel);
 
   const caseEntities = useMemo(
@@ -60,15 +61,20 @@ export default function MapPanel() {
 
   const [focusId, setFocusId] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!selectedEntityId) return;
+    if (points.some((p) => p.id === selectedEntityId)) {
+      setFocusId(selectedEntityId);
+    }
+  }, [selectedEntityId, points]);
+
   const focusPoint = useMemo(
     () => (focusId ? points.find((p) => p.id === focusId) ?? null : null),
     [focusId, points]
   );
 
   const center = useMemo(() => {
-    if (focusPoint) {
-      return { lat: focusPoint.lat, lng: focusPoint.lng, zoom: 12 };
-    }
+    if (focusPoint) return { lat: focusPoint.lat, lng: focusPoint.lng, zoom: 12 };
     if (points.length === 0) return { lat: 20, lng: 0, zoom: 2 };
     if (points.length === 1) return { lat: points[0].lat, lng: points[0].lng, zoom: 10 };
     const lat = points.reduce((s, p) => s + p.lat, 0) / points.length;
@@ -98,8 +104,15 @@ export default function MapPanel() {
       setFocusId(p.id);
       setSelectedEntity(p.id);
       setPanel('rightPanel', true);
+      const neighbors = new Set<string>([p.id]);
+      for (const r of relationships) {
+        if (r.caseId && activeCaseId && r.caseId !== activeCaseId) continue;
+        if (r.sourceId === p.id) neighbors.add(r.targetId);
+        if (r.targetId === p.id) neighbors.add(r.sourceId);
+      }
+      setHighlightedPath([...neighbors]);
     },
-    [setSelectedEntity, setPanel]
+    [setSelectedEntity, setPanel, setHighlightedPath, relationships, activeCaseId]
   );
 
   return (
@@ -127,7 +140,7 @@ export default function MapPanel() {
       >
         <span style={{ fontWeight: 600, fontSize: 13 }}>
           <MapIcon size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
-          {t('map_title')}
+          {t('map_title') || 'Map'}
         </span>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {points.length > 1 && (
@@ -175,21 +188,19 @@ export default function MapPanel() {
           }}
         >
           <div style={{ color: 'var(--text-muted)', marginBottom: 10 }}>
-            {points.length === 0 ? t('map_no_points') : `${points.length} ${t('map_points')}`}
+            {points.length === 0 ? t('map_no_points') || 'No points' : `${points.length} ${t('map_points') || 'points'}`}
           </div>
           {points.map((p) => (
             <button
               key={p.id}
               type="button"
-              className={`btn ${focusId === p.id ? 'btn-primary' : 'btn-ghost'}`}
+              className={`btn ${focusId === p.id || selectedEntityId === p.id ? 'btn-primary' : 'btn-ghost'}`}
               style={{ width: '100%', justifyContent: 'flex-start', marginBottom: 4, textAlign: 'left' }}
               onClick={() => selectPoint(p)}
             >
               <Crosshair size={12} style={{ flexShrink: 0 }} />
               <span style={{ minWidth: 0 }}>
-                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {p.label}
-                </div>
+                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.label}</div>
                 <div className="mono" style={{ fontSize: 10, color: 'var(--text-muted)' }}>
                   {p.lat.toFixed(4)}, {p.lng.toFixed(4)}
                 </div>
@@ -202,7 +213,7 @@ export default function MapPanel() {
             rel="noreferrer"
             style={{ display: 'block', marginTop: 12, fontSize: 11, color: 'var(--accent)' }}
           >
-            {t('map_open_osm')}
+            {t('map_open_osm') || 'Open in OSM'}
           </a>
         </div>
       </div>
