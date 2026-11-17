@@ -186,11 +186,9 @@ function persistActiveCase(get: () => AppState) {
   try {
     const s = get();
     if (!s.activeCaseId) return;
-    caseRepository.saveSnapshot(s.activeCaseId, {
-      entities: s.entities.filter((e) => e.caseId === s.activeCaseId),
-      relationships: s.relationships.filter((r) => r.caseId === s.activeCaseId),
-      timeline: s.timeline.filter((t) => t.caseId === s.activeCaseId),
-    });
+    const c = s.cases.find((x) => x.id === s.activeCaseId);
+    if (!c) return;
+    caseRepository.save(caseRepository.fromState(c, s.entities, s.relationships, s.timeline));
   } catch (e) {
     console.warn('[Argus] persist failed', e);
   }
