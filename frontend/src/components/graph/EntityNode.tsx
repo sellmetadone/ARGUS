@@ -30,36 +30,41 @@ const ICONS: Partial<Record<EntityType, LucideIcon>> = {
   document: FileText, note: StickyNote, evidence: ShieldCheck,
 };
 
+/**
+ * One handle per side, type=source. With ConnectionMode.Loose, edges can
+ * start and end on any side — path direction matches drag (down stays down).
+ * Avoid separate source+target on the same side (RF often picks the wrong one).
+ */
 function ConnectionHandles({ color }: { color: string }) {
   const base: CSSProperties = {
-    width: 10,
-    height: 10,
+    width: 11,
+    height: 11,
     border: '2px solid var(--panel, #fff)',
     borderRadius: 999,
+    background: color,
     opacity: 0,
     transition: 'opacity .14s ease, transform .14s ease, box-shadow .14s ease',
     zIndex: 5,
   };
-  const handle = (type: 'source' | 'target', position: Position, id: string, offset: CSSProperties) => (
-    <Handle
-      key={id}
-      type={type}
-      position={position}
-      id={id}
-      className={`argus-node-handle argus-node-handle-${type}`}
-      style={{ ...base, background: type === 'source' ? color : 'var(--panel, #fff)', borderColor: color, ...offset }}
-    />
-  );
+  const sides: { position: Position; id: string }[] = [
+    { position: Position.Top, id: 'top' },
+    { position: Position.Right, id: 'right' },
+    { position: Position.Bottom, id: 'bottom' },
+    { position: Position.Left, id: 'left' },
+  ];
   return (
     <>
-      {handle('source', Position.Top, 'source-top', { top: -5 })}
-      {handle('target', Position.Top, 'target-top', { top: 5 })}
-      {handle('source', Position.Right, 'source-right', { right: -5 })}
-      {handle('target', Position.Right, 'target-right', { right: 5 })}
-      {handle('source', Position.Bottom, 'source-bottom', { bottom: -5 })}
-      {handle('target', Position.Bottom, 'target-bottom', { bottom: 5 })}
-      {handle('source', Position.Left, 'source-left', { left: -5 })}
-      {handle('target', Position.Left, 'target-left', { left: 5 })}
+      {sides.map(({ position, id }) => (
+        <Handle
+          key={id}
+          type="source"
+          position={position}
+          id={id}
+          className="argus-node-handle argus-node-handle-source"
+          style={base}
+          isConnectable
+        />
+      ))}
     </>
   );
 }
@@ -70,7 +75,8 @@ function EntityNode({ data, selected }: NodeProps) {
   const graphSettings = useStore((s) => s.graphSettings);
   const color = appearance.entityColors?.[nodeData.entityType] || ENTITY_COLORS[nodeData.entityType] || '#64748b';
   const Icon = ICONS[nodeData.entityType] || Database;
-  const scale = Math.max(0.8, Math.min(1.35, graphSettings.nodeSize || 1));
+  // Scale via size, NOT CSS transform — transform breaks RF handle geometry & edge paths
+  const scale = Math.max(0.85, Math.min(1.25, graphSettings.nodeSize || 1));
   const active = Boolean(selected || nodeData.selected || nodeData.highlighted);
   const title = String(nodeData.label || 'Untitled entity');
   const typeLabel = String(nodeData.entityType || 'entity').replace(/_/g, ' ');
@@ -78,22 +84,29 @@ function EntityNode({ data, selected }: NodeProps) {
   return (
     <article
       className={`argus-entity-node${active ? ' is-active' : ''}${nodeData.pinned ? ' is-pinned' : ''}`}
-      style={{ '--entity-accent': color, '--node-scale': scale } as CSSProperties}
+      style={
+        {
+          '--entity-accent': color,
+          minWidth: Math.round(176 * scale),
+          maxWidth: Math.round(252 * scale),
+        } as CSSProperties
+      }
       title={`${typeLabel}: ${title}`}
       aria-label={`${typeLabel}: ${title}`}
     >
       <ConnectionHandles color={color} />
       <div className="argus-node-accent" />
-      <div className="argus-node-content">
-        <span className="argus-node-icon" aria-hidden="true"><Icon size={17} strokeWidth={1.8} /></span>
+      <div className="argus-node-content" style={{ minHeight: Math.round(64 * scale), padding: `${Math.round(10 * scale)}px ${Math.round(12 * scale)}px` }}>
+        <span className="argus-node-icon" aria-hidden="true">
+          <Icon size={Math.round(17 * scale)} strokeWidth={1.8} />
+        </span>
         <div className="argus-node-copy">
           <span className="argus-node-type">{typeLabel}</span>
-          <span className="argus-node-title">{title}</span>
+          <span className="argus-node-title" style={{ fontSize: `${12.5 * scale}px` }}>{title}</span>
           {nodeData.subtitle && <span className="argus-node-subtitle">{nodeData.subtitle}</span>}
         </div>
         {nodeData.pinned && <span className="argus-node-pin" title="Pinned" aria-label="Pinned" />}
       </div>
-      <div className="argus-node-port-hint" aria-hidden="true">CONNECT</div>
     </article>
   );
 }
