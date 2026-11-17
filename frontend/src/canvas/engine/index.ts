@@ -2,6 +2,7 @@ export { CanvasEngine, canvasEngine, type EntityMirror } from './CanvasEngine';
 export {
   createInitialCanvasState,
   DEFAULT_LAYER,
+  STICKY_PALETTE,
   type AlignMode,
   type CanvasEngineState,
   type CanvasLayer,
@@ -9,4 +10,5 @@ export {
   type CanvasObjectKind,
   type CanvasTool,
   type CanvasViewport,
+  type ShapeVariant,
 } from './types';

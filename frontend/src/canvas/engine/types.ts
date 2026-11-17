@@ -1,9 +1,19 @@
 /**
- * CanvasEngine types — unified canvas state surface.
- * Case data remains in Zustand; engine mirrors layout/selection/viewport for tools.
+ * ARGUS CanvasEngine types — original investigation board model (MIT).
+ * Inspired by common whiteboard workflows; not derived from proprietary code.
  */
 
-export type CanvasTool = 'select' | 'hand' | 'node' | 'connect' | 'note' | 'text' | 'frame';
+export type CanvasTool =
+  | 'select'
+  | 'hand'
+  | 'node'
+  | 'connect'
+  | 'note'
+  | 'text'
+  | 'frame'
+  | 'shape'
+  | 'pen'
+  | 'stamp';
 
 export type CanvasViewport = {
   x: number;
@@ -19,7 +29,18 @@ export type CanvasLayer = {
   order: number;
 };
 
-export type CanvasObjectKind = 'entity' | 'note' | 'text' | 'frame' | 'group';
+/** Board object kinds used by the investigation overlay */
+export type CanvasObjectKind =
+  | 'entity'
+  | 'note'
+  | 'text'
+  | 'frame'
+  | 'group'
+  | 'shape'
+  | 'stroke'
+  | 'stamp';
+
+export type ShapeVariant = 'rect' | 'ellipse' | 'diamond' | 'rounded';
 
 export type CanvasObject = {
   id: string;
@@ -32,9 +53,12 @@ export type CanvasObject = {
   height?: number;
   label?: string;
   locked?: boolean;
-  /** member entity ids when kind === 'group' */
   memberIds?: string[];
   color?: string;
+  shape?: ShapeVariant;
+  points?: { x: number; y: number }[];
+  strokeWidth?: number;
+  opacity?: number;
 };
 
 export type AlignMode =
@@ -54,8 +78,10 @@ export type CanvasEngineState = {
   layers: CanvasLayer[];
   objects: CanvasObject[];
   selectedIds: string[];
-  /** entity ids currently mirrored */
   entityCount: number;
+  drawColor: string;
+  drawWidth: number;
+  shapeVariant: ShapeVariant;
 };
 
 export const DEFAULT_LAYER: CanvasLayer = {
@@ -66,6 +92,16 @@ export const DEFAULT_LAYER: CanvasLayer = {
   order: 0,
 };
 
+export const STICKY_PALETTE = [
+  '#fef08a',
+  '#fdba74',
+  '#f9a8d4',
+  '#a5b4fc',
+  '#86efac',
+  '#7dd3fc',
+  '#e2e8f0',
+];
+
 export function createInitialCanvasState(caseId: string | null = null): CanvasEngineState {
   return {
     caseId,
@@ -75,5 +111,8 @@ export function createInitialCanvasState(caseId: string | null = null): CanvasEn
     objects: [],
     selectedIds: [],
     entityCount: 0,
+    drawColor: '#526C8C',
+    drawWidth: 2.5,
+    shapeVariant: 'rect',
   };
 }
