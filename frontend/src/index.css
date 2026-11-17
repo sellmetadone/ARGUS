@@ -134,15 +134,6 @@ html, body, #root {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-[data-reduce-motion="true"] *, [data-reduce-motion="true"] .react-flow__node {
-  transition: none !important; animation: none !important;
-}
-
-@media (max-width: 1023px) {
-  .canvas-toolbar { left: 8px; top: auto; bottom: 12px; transform: none; flex-direction: row; }
-}
-
-/* Graph visual system */
 .graph-surface {
   position: relative; isolation: isolate; overflow: hidden;
   background: radial-gradient(ellipse at 50% 42%, rgba(82,108,140,.035), transparent 62%), var(--canvas);
@@ -153,20 +144,12 @@ html, body, #root {
   background: rgba(82,108,140,.10); border: 1px solid rgba(82,108,140,.55);
 }
 .argus-flow .react-flow__node { border-radius: 10px; background: transparent; border: 0; box-shadow: none; }
-.argus-flow .react-flow__edge-path {
-  stroke-linecap: round; stroke-linejoin: round;
-  transition: stroke-width .14s ease, opacity .14s ease;
-}
-.argus-flow .react-flow__edge:hover .react-flow__edge-path,
-.argus-flow .react-flow__edge.selected .react-flow__edge-path {
-  stroke-width: 2.8px !important;
-}
+.argus-flow .react-flow__edge-path { stroke-linecap: round; stroke-linejoin: round; }
 .argus-flow .react-flow__connection-path {
   stroke: var(--accent); stroke-width: 2.2px; stroke-dasharray: 5 4;
 }
 .argus-flow .react-flow__controls {
-  overflow: hidden; border: 1px solid var(--border); border-radius: 9px;
-  background: var(--panel); box-shadow: 0 3px 12px rgba(28,39,52,.07);
+  overflow: hidden; border: 1px solid var(--border); border-radius: 9px; background: var(--panel);
 }
 .argus-flow .react-flow__minimap {
   overflow: hidden; border-radius: 10px !important; background: var(--panel) !important;
@@ -185,14 +168,12 @@ html, body, #root {
   border: 1px solid color-mix(in srgb, var(--entity-accent) 27%, var(--border));
   border-radius: 10px;
   box-shadow: 0 2px 5px rgba(28,39,52,.055), 0 8px 20px rgba(28,39,52,.045);
-  /* NO CSS transform:scale — breaks React Flow handle positions and edge paths */
   transition: border-color .16s ease, box-shadow .16s ease;
   cursor: grab;
 }
 .argus-entity-node:active { cursor: grabbing; }
 .argus-entity-node:hover {
   border-color: color-mix(in srgb, var(--entity-accent) 55%, var(--border));
-  box-shadow: 0 3px 8px rgba(28,39,52,.07), 0 10px 24px rgba(28,39,52,.075);
 }
 .argus-entity-node.is-active {
   border-color: var(--entity-accent);
@@ -237,20 +218,9 @@ html, body, #root {
 }
 .argus-entity-node:hover .argus-node-handle,
 .argus-entity-node.is-active .argus-node-handle,
-.react-flow__node.connecting .argus-node-handle,
-.react-flow__node.dragging .argus-node-handle { opacity: 1; }
-.argus-node-handle-source {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--entity-accent) 15%, transparent);
-}
-.argus-node-handle:hover {
-  transform: scale(1.45);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--entity-accent) 16%, transparent);
-}
+.react-flow__node.connecting .argus-node-handle { opacity: 1; }
+.argus-node-handle:hover { transform: scale(1.45); }
 
-.argus-flow .react-flow__edge.argus-edge-assumed .react-flow__edge-path { stroke-dasharray: 5 4; }
-.argus-flow .react-flow__edge.argus-edge-unknown .react-flow__edge-path { opacity: .72; }
-
-/* Whiteboard */
 .whiteboard-bar {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 25;
   display: flex; align-items: center; gap: 4px; padding: 6px 8px;
@@ -259,7 +229,6 @@ html, body, #root {
 }
 .whiteboard-bar .wb-count {
   font-size: 11px; font-weight: 650; color: var(--accent); padding: 0 6px;
-  display: inline-flex; align-items: center; gap: 4px;
 }
 .whiteboard-bar .wb-hint { font-size: 11px; color: var(--text-muted); padding: 0 8px; white-space: nowrap; }
 .whiteboard-layer { position: absolute; inset: 0; pointer-events: none; z-index: 5; overflow: hidden; }
@@ -293,3 +262,56 @@ html, body, #root {
 }
 .wb-note-body { font-size: 12px; white-space: pre-wrap; padding-right: 16px; }
 .wb-text { position: absolute; pointer-events: auto; color: var(--text); font-weight: 600; padding-right: 18px; }
+
+/* Board objects */
+.wb-shape {
+  position: absolute;
+  pointer-events: auto;
+  border: 2px solid var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.wb-shape-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  padding: 4px;
+  max-width: 90%;
+  overflow: hidden;
+}
+.wb-stamp {
+  position: absolute;
+  pointer-events: auto;
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+  transform: rotate(-6deg);
+  white-space: nowrap;
+}
+.wb-stroke { pointer-events: none; }
+.wb-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 4px;
+}
+.wb-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.wb-swatch.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 1px var(--border);
+}
