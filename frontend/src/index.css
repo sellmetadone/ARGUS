@@ -1,2 +1,115 @@
-/* badge styles appended - full file from local enhance */
-/* See GraphCanvas + EntityNode for evidenceCount wiring */
+/* ARGUS design tokens + evidence badge — full stylesheet restored */
+:root {
+  --bg: #F7F7F5;
+  --canvas: #FCFCFB;
+  --panel: #FFFFFF;
+  --border: #E8E6E1;
+  --text: #1A1A1A;
+  --text-muted: #777B80;
+  --accent: #526C8C;
+  --sidebar-w: 280px;
+  --inspector-w: 360px;
+  --ui-pad: 12px;
+  --panel-gap: 8px;
+}
+html[data-theme='dark'], [data-theme='dark'] {
+  --bg: #0f1419;
+  --canvas: #0b0f14;
+  --panel: #151b22;
+  --border: #243041;
+  --text: #e7ecf3;
+  --text-muted: #8b98a8;
+  --accent: #7aa2c7;
+}
+html, body, #root { height: 100%; margin: 0; }
+body {
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+.btn { border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.btn:hover { background: var(--bg); }
+.btn-icon { padding: 4px 6px; display: inline-flex; align-items: center; justify-content: center; }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn.active { border-color: var(--accent); color: var(--accent); }
+.canvas-toolbar, .whiteboard-bar {
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--panel);
+}
+.wb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
+.wb-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border); cursor: pointer; }
+.wb-swatch.active { outline: 2px solid var(--accent); }
+.wb-hint, .wb-count { font-size: 11px; color: var(--text-muted); }
+.graph-surface { width: 100%; height: 100%; position: relative; }
+.argus-entity-node {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  cursor: grab;
+  overflow: visible;
+}
+.argus-entity-node:active { cursor: grabbing; }
+.argus-entity-node.is-active {
+  border-color: var(--entity-accent, var(--accent));
+  box-shadow: 0 0 0 1px var(--entity-accent, var(--accent));
+}
+.argus-node-accent {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--entity-accent, var(--accent)); border-radius: 10px 0 0 10px;
+}
+.argus-node-content {
+  position: relative;
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.argus-node-icon {
+  display: flex; align-items: center; justify-content: center;
+  color: var(--entity-accent, var(--accent)); flex-shrink: 0; margin-top: 1px;
+}
+.argus-node-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.argus-node-type {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);
+}
+.argus-node-title {
+  font-weight: 600; line-height: 1.25; word-break: break-word;
+}
+.argus-node-subtitle {
+  font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.argus-node-pin {
+  position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+}
+.argus-node-handle { opacity: 0; }
+.argus-entity-node:hover .argus-node-handle,
+.argus-entity-node.is-active .argus-node-handle,
+.react-flow__node.connecting .argus-node-handle { opacity: 1; }
+.argus-node-handle:hover { transform: scale(1.45); }
+/* Evidence badge on entity nodes */
+.argus-node-ev-badge {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  color: #0f172a;
+  background: #94a3b8;
+  box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  pointer-events: none;
+  z-index: 2;
+}
+.argus-node-ev-badge.ev-weak { background: #fbbf24; }
+.argus-node-ev-badge.ev-moderate { background: #34d399; }
+.argus-node-ev-badge.ev-strong { background: #22d3ee; color: #0f172a; }
+.argus-node-ev-badge.ev-none { background: #94a3b8; }
+.map-panel .leaflet-container { width: 100%; height: 100%; background: var(--bg); }
+.argus-marker { background: transparent !important; border: none !important; }
+[data-reduce-motion='true'] * { transition: none !important; animation: none !important; }
