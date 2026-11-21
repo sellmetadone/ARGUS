@@ -102,7 +102,6 @@ function intervalsOverlap(
   return a.start <= rangeEnd && a.end >= rangeStart;
 }
 
-/** Entity is visible if its known date interval overlaps [from, to], or has no dates (keep visible). */
 export function entityVisibleInRange(e: Entity, from?: string, to?: string, keepUndated = true): boolean {
   const { fromMs, toMs } = rangeBounds(from, to);
   if (fromMs == null && toMs == null) return true;
@@ -124,7 +123,6 @@ export function relationshipVisibleInRange(
   return intervalsOverlap(iv, fromMs, toMs);
 }
 
-/** Filter graph nodes/edges by temporal window. Undated items kept by default. */
 export function filterGraphByTemporalRange(
   entities: Entity[],
   relationships: Relationship[],
@@ -217,4 +215,20 @@ export function unifiedTemporalPoints(entities: Entity[], events: TimelineEvent[
   }
   for (const ev of events) points.push({ id: ev.id, label: ev.title, timestamp: ev.timestamp, kind: 'event' });
   return points.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+}
+
+/** Entity ids that have at least one timeline event inside [from, to]. */
+export function entityIdsWithEventsInRange(
+  events: TimelineEvent[],
+  from?: string,
+  to?: string
+): string[] {
+  const filtered = filterByDateRange(events, from, to);
+  const ids = new Set<string>();
+  for (const ev of filtered) {
+    if (ev.entityId) ids.add(ev.entityId);
+    const propId = ev.properties && String(ev.properties.entityId || '');
+    if (propId) ids.add(propId);
+  }
+  return [...ids];
 }
