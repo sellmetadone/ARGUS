@@ -13,7 +13,8 @@ export type CanvasTool =
   | 'frame'
   | 'shape'
   | 'pen'
-  | 'stamp';
+  | 'stamp'
+  | 'eraser';
 
 export type CanvasViewport = {
   x: number;

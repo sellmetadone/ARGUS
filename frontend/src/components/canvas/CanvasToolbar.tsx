@@ -1,6 +1,6 @@
 import {
   MousePointer2, Hand, Square, Link2, StickyNote, Type, Frame,
-  Circle, Pencil, Tag,
+  Circle, Pencil, Tag, Eraser,
 } from 'lucide-react';
 import { useStore, type CanvasTool } from '../../store/useStore';
 import { useT } from '../../i18n/useT';
@@ -16,6 +16,7 @@ const TOOLS: { id: CanvasTool; icon: React.ReactNode; labelKey: string }[] = [
   { id: 'text', icon: <Type size={16} />, labelKey: 'wb_text' },
   { id: 'pen', icon: <Pencil size={16} />, labelKey: 'wb_pen' },
   { id: 'stamp', icon: <Tag size={16} />, labelKey: 'wb_stamp' },
+  { id: 'eraser', icon: <Eraser size={16} />, labelKey: 'wb_eraser' },
 ];
 
 export default function CanvasToolbar() {
