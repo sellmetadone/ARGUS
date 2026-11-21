@@ -294,6 +294,18 @@ export class CanvasEngine {
     this.emit();
   }
 
+  /** Remove freehand strokes near a point (eraser). */
+  eraseNear(x: number, y: number, radius = 18) {
+    const next = this.state.objects.filter((o) => {
+      if (o.kind !== 'stroke' || !o.points?.length) return true;
+      return !o.points.some((pt) => Math.hypot(pt.x - x, pt.y - y) <= radius);
+    });
+    if (next.length === this.state.objects.length) return;
+    this.state = { ...this.state, objects: next };
+    this.checkpoint();
+    this.emit();
+  }
+
   updateObject(id: string, patch: Partial<CanvasObject>) {
     this.state = {
       ...this.state,
