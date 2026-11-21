@@ -1,8 +1,14 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { useStore } from '../../store/useStore';
 import { useTemporalFilter } from '../../store/temporalFilterStore';
-import { filterByDateRange, findOverlaps, sortEvents } from '../../services/intelligence/timelineService';
+import {
+  filterByDateRange,
+  findOverlaps,
+  sortEvents,
+  filterGraphByTemporalRange,
+  entityIdsWithEventsInRange,
+} from '../../services/intelligence/timelineService';
 import { useT } from '../../i18n/useT';
 
 function toDay(iso: string): string {
@@ -17,6 +23,7 @@ export default function Timeline() {
     activeCaseId,
     getTimelineForCase,
     getRelationshipsForCase,
+    entities,
     selectedTimelineEventId,
     setSelectedTimelineEvent,
     setSelectedEntity,
@@ -33,6 +40,11 @@ export default function Timeline() {
   const relationships = useMemo(
     () => (activeCaseId ? getRelationshipsForCase(activeCaseId) : []),
     [activeCaseId, getRelationshipsForCase]
+  );
+
+  const caseEntities = useMemo(
+    () => (activeCaseId ? entities.filter((e) => e.caseId === activeCaseId) : []),
+    [entities, activeCaseId]
   );
 
   const sortedAll = useMemo(() => sortEvents(all), [all]);
@@ -57,6 +69,29 @@ export default function Timeline() {
     return Math.round(((end - bounds.min) / span) * 100);
   }, [bounds, to]);
 
+  const graphSlice = useMemo(() => {
+    if (!enabled || (!from && !to)) {
+      return { count: caseEntities.length, eventLinkedIds: [] as string[] };
+    }
+    const slice = filterGraphByTemporalRange(caseEntities, relationships, from || undefined, to || undefined, {
+      keepUndated,
+    });
+    const eventLinked = entityIdsWithEventsInRange(all, from || undefined, to || undefined);
+    return { count: slice.entities.length, eventLinkedIds: eventLinked };
+  }, [enabled, from, to, keepUndated, caseEntities, relationships, all]);
+
+  const lastHighlightKey = useRef('');
+
+  useEffect(() => {
+    if (!enabled || (!from && !to)) return;
+    const key = `${from}|${to}|${graphSlice.eventLinkedIds.join(',')}`;
+    if (key === lastHighlightKey.current) return;
+    lastHighlightKey.current = key;
+    if (graphSlice.eventLinkedIds.length) {
+      setHighlightedPath(graphSlice.eventLinkedIds);
+    }
+  }, [enabled, from, to, graphSlice.eventLinkedIds, setHighlightedPath]);
+
   const onScrub = useCallback(
     (pct: number) => {
       if (!bounds) return;
@@ -66,8 +101,10 @@ export default function Timeline() {
       const startDay = new Date(bounds.min).toISOString().slice(0, 10);
       setRange(startDay, day);
       setEnabled(true);
+      const linked = entityIdsWithEventsInRange(all, startDay, day);
+      if (linked.length) setHighlightedPath(linked);
     },
-    [bounds, setRange, setEnabled]
+    [bounds, setRange, setEnabled, all, setHighlightedPath]
   );
 
   const focusEventOnGraph = useCallback(
@@ -92,6 +129,7 @@ export default function Timeline() {
 
   return (
     <div
+      className="argus-timeline"
       style={{
         height: 196,
         background: 'var(--panel)',
@@ -108,32 +146,14 @@ export default function Timeline() {
         <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1 }}>
           {t('timeline').toUpperCase()}
         </span>
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 11,
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-          }}
-        >
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer' }}>
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
           {t('temporal_filter_graph') || 'Filter graph'}
         </label>
         <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={dateInp} title={t('temporal_from')} />
         <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>–</span>
         <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={dateInp} title={t('temporal_to')} />
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 11,
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-          }}
-        >
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer' }}>
           <input type="checkbox" checked={keepUndated} onChange={(e) => setKeepUndated(e.target.checked)} />
           {t('temporal_keep_undated')}
         </label>
@@ -141,7 +161,9 @@ export default function Timeline() {
           {t('clear') || 'Clear'}
         </button>
         {enabled && (from || to) && (
-          <span style={{ fontSize: 10, color: 'var(--accent)' }}>{t('temporal_active') || 'Active'}</span>
+          <span style={{ fontSize: 10, color: 'var(--accent)' }}>
+            {t('temporal_active') || 'Active'} · {graphSlice.count}/{caseEntities.length} nodes
+          </span>
         )}
         {overlaps.length > 0 && (
           <span style={{ fontSize: 10, color: '#fbbf24' }}>
@@ -164,6 +186,7 @@ export default function Timeline() {
             style={{ flex: 1, accentColor: 'var(--accent)' }}
             title={t('temporal_scrubber') || 'Scrub timeline → filter graph'}
             aria-label="Timeline scrubber"
+            data-testid="timeline-scrubber"
           />
           <span style={{ fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
             {to || format(bounds.max, 'yyyy-MM-dd')}
@@ -171,27 +194,8 @@ export default function Timeline() {
         </div>
       )}
 
-      <div
-        style={{
-          display: 'flex',
-          gap: 0,
-          alignItems: 'flex-start',
-          position: 'relative',
-          minWidth: 'max-content',
-          flex: 1,
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            top: 14,
-            left: 0,
-            right: 0,
-            height: 2,
-            background: 'var(--border)',
-            zIndex: 0,
-          }}
-        />
+      <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start', position: 'relative', minWidth: 'max-content', flex: 1 }}>
+        <div style={{ position: 'absolute', top: 14, left: 0, right: 0, height: 2, background: 'var(--border)', zIndex: 0 }} />
         {events.length === 0 && (
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t('temporal_no_events') || 'No events'}</div>
         )}
@@ -201,6 +205,7 @@ export default function Timeline() {
           return (
             <div
               key={ev.id}
+              data-testid="timeline-event"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
