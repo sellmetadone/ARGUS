@@ -431,14 +431,15 @@ export default function GraphCanvas() {
 
   const onNodesDelete = useCallback(
     (deleted: Node[]) => {
+      setSelectedEntity(null);
+      setSelectedEntities([]);
       for (const n of deleted) {
         if ((pinnedNodeIds || []).includes(n.id)) continue;
-        removeEntity(n.id);
         canvasEngine.removeByEntityId(n.id);
+        removeEntity(n.id);
       }
-      setSelectedEntity(null);
     },
-    [removeEntity, pinnedNodeIds, setSelectedEntity]
+    [removeEntity, pinnedNodeIds, setSelectedEntity, setSelectedEntities]
   );
 
   const onEdgesDelete = useCallback(
@@ -457,10 +458,12 @@ export default function GraphCanvas() {
       if (selectedEntityId) {
         if ((pinnedNodeIds || []).includes(selectedEntityId)) return;
         ev.preventDefault();
+        const id = selectedEntityId;
         setSelectedEntity(null);
+        setSelectedEntities([]);
         setSelectedRelationship(null);
-        removeEntity(selectedEntityId);
-        canvasEngine.removeByEntityId(selectedEntityId);
+        canvasEngine.removeByEntityId(id);
+        queueMicrotask(() => removeEntity(id));
         return;
       }
       if (selectedRelationshipId) {
@@ -478,6 +481,7 @@ export default function GraphCanvas() {
     removeEntity,
     removeRelationship,
     setSelectedEntity,
+    setSelectedEntities,
     setSelectedRelationship,
   ]);
 
