@@ -1,9 +1,11 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
-import { Map as MapIcon, X, Crosshair, Maximize2 } from 'lucide-react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { Map as MapIcon, X, Crosshair, Maximize2, Link2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useT } from '../../i18n/useT';
 
-type GeoPoint = { id: string; label: string; lat: number; lng: number };
+type GeoPoint = { id: string; label: string; lat: number; lng: number; type?: string };
 
 function parseCoord(v: unknown): number | null {
   if (v == null || v === '') return null;
@@ -15,7 +17,8 @@ function parseCoord(v: unknown): number | null {
 function extractPoint(
   id: string,
   label: string,
-  props: Record<string, unknown> | undefined
+  props: Record<string, unknown> | undefined,
+  type?: string
 ): GeoPoint | null {
   if (!props) return null;
   let lat = parseCoord(props.lat ?? props.latitude ?? props.Lat ?? props.LAT);
@@ -32,7 +35,21 @@ function extractPoint(
 
   if (lat == null || lng == null) return null;
   if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
-  return { id, label, lat, lng };
+  return { id, label, lat, lng, type };
+}
+
+function makeIcon(active: boolean) {
+  const color = active ? '#526C8C' : '#36856d';
+  const size = active ? 16 : 12;
+  return L.divIcon({
+    className: 'argus-map-marker',
+    html: `<span style="
+      display:block;width:${size}px;height:${size}px;border-radius:50%;
+      background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);
+    "></span>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
 }
 
 export default function MapPanel() {
@@ -45,6 +62,11 @@ export default function MapPanel() {
   const relationships = useStore((s) => s.relationships);
   const setPanel = useStore((s) => s.setPanel);
 
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInst = useRef<L.Map | null>(null);
+  const layerRef = useRef<L.LayerGroup | null>(null);
+  const markersRef = useRef<Map<string, L.Marker>>(new Map());
+
   const caseEntities = useMemo(
     () => (activeCaseId ? entities.filter((e) => e.caseId === activeCaseId) : []),
     [entities, activeCaseId]
@@ -53,7 +75,7 @@ export default function MapPanel() {
   const points = useMemo(() => {
     const out: GeoPoint[] = [];
     for (const e of caseEntities) {
-      const p = extractPoint(e.id, e.label || e.id, e.properties as Record<string, unknown>);
+      const p = extractPoint(e.id, e.label || e.id, e.properties as Record<string, unknown>, e.type);
       if (p) out.push(p);
     }
     return out;
@@ -63,41 +85,8 @@ export default function MapPanel() {
 
   useEffect(() => {
     if (!selectedEntityId) return;
-    if (points.some((p) => p.id === selectedEntityId)) {
-      setFocusId(selectedEntityId);
-    }
+    if (points.some((p) => p.id === selectedEntityId)) setFocusId(selectedEntityId);
   }, [selectedEntityId, points]);
-
-  const focusPoint = useMemo(
-    () => (focusId ? points.find((p) => p.id === focusId) ?? null : null),
-    [focusId, points]
-  );
-
-  const center = useMemo(() => {
-    if (focusPoint) return { lat: focusPoint.lat, lng: focusPoint.lng, zoom: 12 };
-    if (points.length === 0) return { lat: 20, lng: 0, zoom: 2 };
-    if (points.length === 1) return { lat: points[0].lat, lng: points[0].lng, zoom: 10 };
-    const lat = points.reduce((s, p) => s + p.lat, 0) / points.length;
-    const lng = points.reduce((s, p) => s + p.lng, 0) / points.length;
-    const latSpan = Math.max(...points.map((p) => p.lat)) - Math.min(...points.map((p) => p.lat));
-    const lngSpan = Math.max(...points.map((p) => p.lng)) - Math.min(...points.map((p) => p.lng));
-    const span = Math.max(latSpan, lngSpan, 0.05);
-    const zoom = Math.max(2, Math.min(12, Math.floor(8 - Math.log2(span))));
-    return { lat, lng, zoom };
-  }, [focusPoint, points]);
-
-  const delta = 180 / Math.pow(2, Math.max(center.zoom, 1));
-  const bbox = [
-    (center.lng - delta * 1.5).toFixed(6),
-    (center.lat - delta).toFixed(6),
-    (center.lng + delta * 1.5).toFixed(6),
-    (center.lat + delta).toFixed(6),
-  ].join('%2C');
-
-  const marker = focusPoint || (points.length === 1 ? points[0] : null);
-  const embedSrc = marker
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${marker.lat}%2C${marker.lng}`
-    : `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik`;
 
   const selectPoint = useCallback(
     (p: GeoPoint) => {
@@ -114,6 +103,85 @@ export default function MapPanel() {
     },
     [setSelectedEntity, setPanel, setHighlightedPath, relationships, activeCaseId]
   );
+
+  useEffect(() => {
+    if (!mapRef.current || mapInst.current) return;
+    const map = L.map(mapRef.current, {
+      center: [20, 0],
+      zoom: 2,
+      zoomControl: true,
+      attributionControl: true,
+    });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap',
+    }).addTo(map);
+    const group = L.layerGroup().addTo(map);
+    mapInst.current = map;
+    layerRef.current = group;
+    requestAnimationFrame(() => map.invalidateSize());
+    return () => {
+      map.remove();
+      mapInst.current = null;
+      layerRef.current = null;
+      markersRef.current.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapInst.current;
+    const group = layerRef.current;
+    if (!map || !group) return;
+
+    const keep = new Set(points.map((p) => p.id));
+    markersRef.current.forEach((m, id) => {
+      if (!keep.has(id)) {
+        group.removeLayer(m);
+        markersRef.current.delete(id);
+      }
+    });
+
+    for (const p of points) {
+      const active = p.id === focusId || p.id === selectedEntityId;
+      let marker = markersRef.current.get(p.id);
+      if (!marker) {
+        marker = L.marker([p.lat, p.lng], { icon: makeIcon(active), title: p.label });
+        marker.bindTooltip(p.label, { direction: 'top', offset: [0, -8] });
+        marker.on('click', () => selectPoint(p));
+        group.addLayer(marker);
+        markersRef.current.set(p.id, marker);
+      } else {
+        marker.setLatLng([p.lat, p.lng]);
+        marker.setIcon(makeIcon(active));
+      }
+    }
+
+    requestAnimationFrame(() => map.invalidateSize());
+  }, [points, focusId, selectedEntityId, selectPoint]);
+
+  const fitAll = useCallback(() => {
+    const map = mapInst.current;
+    if (!map || points.length === 0) return;
+    if (points.length === 1) {
+      map.setView([points[0].lat, points[0].lng], 12, { animate: true });
+      return;
+    }
+    const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]));
+    map.fitBounds(bounds.pad(0.18), { animate: true });
+  }, [points]);
+
+  const focusSelected = useCallback(() => {
+    const map = mapInst.current;
+    const p = points.find((x) => x.id === (focusId || selectedEntityId));
+    if (!map || !p) return;
+    map.setView([p.lat, p.lng], Math.max(map.getZoom(), 11), { animate: true });
+  }, [points, focusId, selectedEntityId]);
+
+  useEffect(() => {
+    if (points.length === 0) return;
+    const timer = window.setTimeout(() => fitAll(), 120);
+    return () => window.clearTimeout(timer);
+  }, [points.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
@@ -134,88 +202,68 @@ export default function MapPanel() {
           justifyContent: 'space-between',
           padding: '10px 14px',
           borderBottom: '1px solid var(--border)',
-          flexShrink: 0,
           gap: 8,
         }}
       >
-        <span style={{ fontWeight: 600, fontSize: 13 }}>
-          <MapIcon size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 13 }}>
+          <MapIcon size={16} />
           {t('map_title') || 'Map'}
-        </span>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          {points.length > 1 && (
-            <button
-              type="button"
-              className="btn btn-ghost"
-              style={{ padding: '4px 8px', fontSize: 11 }}
-              title={t('map_fit_all')}
-              onClick={() => setFocusId(null)}
-            >
-              <Maximize2 size={13} /> {t('map_fit_all')}
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn btn-ghost"
-            style={{ padding: 4 }}
-            onClick={() => setPanel('map', false)}
-            aria-label="Close"
-          >
-            <X size={14} />
+          <span style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: 12 }}>
+            · {points.length}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button type="button" className="btn btn-secondary" style={{ fontSize: 11 }} onClick={focusSelected} title={t('map_focus') || 'Focus'}>
+            <Crosshair size={14} />
+          </button>
+          <button type="button" className="btn btn-secondary" style={{ fontSize: 11 }} onClick={fitAll} title={t('map_fit_all') || 'Fit all'}>
+            <Maximize2 size={14} />
+          </button>
+          <button type="button" className="btn btn-ghost" style={{ padding: 4 }} onClick={() => setPanel('map', false)}>
+            <X size={16} />
           </button>
         </div>
       </div>
+
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-          <iframe
-            key={embedSrc}
-            title="OpenStreetMap"
-            src={embedSrc}
-            style={{ width: '100%', height: '100%', border: 0 }}
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
-        </div>
-        <div
+        <div ref={mapRef} style={{ flex: 1, minHeight: 200 }} className="argus-leaflet-map" />
+        <aside
           style={{
-            width: 260,
-            maxWidth: '40%',
+            width: 220,
             borderLeft: '1px solid var(--border)',
-            overflowY: 'auto',
-            padding: 12,
+            overflow: 'auto',
+            padding: 8,
             fontSize: 12,
-            background: 'var(--panel)',
           }}
         >
-          <div style={{ color: 'var(--text-muted)', marginBottom: 10 }}>
-            {points.length === 0 ? t('map_no_points') || 'No points' : `${points.length} ${t('map_points') || 'points'}`}
-          </div>
+          {points.length === 0 && (
+            <div style={{ color: 'var(--text-muted)', padding: 8 }}>
+              {t('map_no_points') || 'No geolocated entities. Add lat/lng or coordinates to entity properties.'}
+            </div>
+          )}
           {points.map((p) => (
             <button
               key={p.id}
               type="button"
-              className={`btn ${focusId === p.id || selectedEntityId === p.id ? 'btn-primary' : 'btn-ghost'}`}
-              style={{ width: '100%', justifyContent: 'flex-start', marginBottom: 4, textAlign: 'left' }}
-              onClick={() => selectPoint(p)}
+              className={`btn ${p.id === focusId || p.id === selectedEntityId ? 'btn-primary' : 'btn-ghost'}`}
+              style={{
+                width: '100%',
+                justifyContent: 'flex-start',
+                textAlign: 'left',
+                marginBottom: 4,
+                fontSize: 11,
+                padding: '6px 8px',
+              }}
+              onClick={() => {
+                selectPoint(p);
+                mapInst.current?.setView([p.lat, p.lng], 12, { animate: true });
+              }}
             >
-              <Crosshair size={12} style={{ flexShrink: 0 }} />
-              <span style={{ minWidth: 0 }}>
-                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.label}</div>
-                <div className="mono" style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                  {p.lat.toFixed(4)}, {p.lng.toFixed(4)}
-                </div>
-              </span>
+              <Link2 size={12} style={{ flexShrink: 0 }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.label}</span>
             </button>
           ))}
-          <a
-            href={`https://www.openstreetmap.org/#map=${center.zoom}/${center.lat}/${center.lng}`}
-            target="_blank"
-            rel="noreferrer"
-            style={{ display: 'block', marginTop: 12, fontSize: 11, color: 'var(--accent)' }}
-          >
-            {t('map_open_osm') || 'Open in OSM'}
-          </a>
-        </div>
+        </aside>
       </div>
     </div>
   );
