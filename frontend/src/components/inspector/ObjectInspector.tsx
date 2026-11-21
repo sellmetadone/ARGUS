@@ -1,11 +1,10 @@
-import { useMemo, useState, useEffect, type CSSProperties, type ReactNode } from 'react';
-import { X, Trash2, Pin, History, Link2, FileText, Info, Map as MapIcon } from 'lucide-react';
+import { useMemo, useState, useEffect, type CSSProperties } from 'react';
+import { X, Trash2, Pin, Link2, Map as MapIcon } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { ENTITY_COLORS, RELATIONSHIP_LABELS } from '../../types';
 import ConnectionEditor from '../connections/ConnectionEditor';
 import { useT } from '../../i18n/useT';
 import { getSchema, type SchemaField } from '../../entities/entitySchemas';
-import { labelFromProperties } from '../../entities/entityFactory';
 
 type Tab = 'overview' | 'data' | 'sources' | 'relations' | 'history';
 
@@ -16,6 +15,16 @@ function hasGeo(props: Record<string, unknown> | undefined): boolean {
   if (Number.isFinite(lat) && Number.isFinite(lng)) return true;
   const raw = props.coordinates ?? props.geo;
   return typeof raw === 'string' && raw.includes(',');
+}
+
+/** pinnedNodeIds is string[] in the store (not Set). */
+function isPinnedId(pinned: unknown, id: string): boolean {
+  if (!pinned) return false;
+  if (Array.isArray(pinned)) return pinned.includes(id);
+  if (typeof (pinned as { has?: (x: string) => boolean }).has === 'function') {
+    return (pinned as { has: (x: string) => boolean }).has(id);
+  }
+  return false;
 }
 
 export default function ObjectInspector() {
@@ -31,7 +40,6 @@ export default function ObjectInspector() {
     updateEntity,
     togglePinNode,
     pinnedNodeIds,
-    appearance,
     history,
     setPanel,
   } = useStore();
@@ -63,7 +71,6 @@ export default function ObjectInspector() {
 
   const onDelete = () => {
     if (entity) {
-      // Clear selection BEFORE remove to keep hooks order stable
       setSelectedEntity(null);
       queueMicrotask(() => removeEntity(entity.id));
     } else if (rel) {
@@ -71,15 +78,15 @@ export default function ObjectInspector() {
     }
   };
 
-  const isPinned = entity ? pinnedNodeIds.has(entity.id) : false;
-  const color = entity ? (ENTITY_COLORS[entity.type] || '#64748b') : '#64748b';
+  const isPinned = entity ? isPinnedId(pinnedNodeIds, entity.id) : false;
+  const color = entity ? ENTITY_COLORS[entity.type] || '#64748b' : '#64748b';
 
   return (
     <div className="object-inspector flex flex-col h-full bg-[var(--bg-panel)] border-l border-[var(--border)]">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border)] shrink-0">
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
         <span className="text-sm font-medium truncate flex-1">
-          {entity ? entity.label || entity.type : rel ? (RELATIONSHIP_LABELS[rel.type] || rel.type) : ''}
+          {entity ? entity.label || entity.type : rel ? RELATIONSHIP_LABELS[rel.type] || rel.type : ''}
         </span>
         {entity && (
           <button
@@ -118,8 +125,13 @@ export default function ObjectInspector() {
           <div className="flex-1 overflow-auto p-3 text-sm">
             {tab === 'overview' && (
               <div className="space-y-2">
-                <div><span className="text-[var(--text-muted)]">Type:</span> {entity.type}</div>
-                <div><span className="text-[var(--text-muted)]">ID:</span> <code className="text-xs">{entity.id}</code></div>
+                <div>
+                  <span className="text-[var(--text-muted)]">Type:</span> {entity.type}
+                </div>
+                <div>
+                  <span className="text-[var(--text-muted)]">ID:</span>{' '}
+                  <code className="text-xs">{entity.id}</code>
+                </div>
                 {hasGeo(entity.properties) && (
                   <button
                     type="button"
@@ -131,11 +143,11 @@ export default function ObjectInspector() {
                 )}
               </div>
             )}
-            {tab === 'data' && (
-              <EntityDataForm entity={entity} updateEntity={updateEntity} />
-            )}
+            {tab === 'data' && <EntityDataForm entity={entity} updateEntity={updateEntity} />}
             {tab === 'sources' && (
-              <div className="text-[var(--text-muted)] text-xs">{t('inspector_sources_empty') || 'No sources attached'}</div>
+              <div className="text-[var(--text-muted)] text-xs">
+                {t('inspector_sources_empty') || 'No sources attached'}
+              </div>
             )}
             {tab === 'relations' && (
               <div className="space-y-1">
@@ -155,9 +167,14 @@ export default function ObjectInspector() {
             )}
             {tab === 'history' && (
               <div className="text-xs text-[var(--text-muted)]">
-                {(history || []).filter((h: any) => h.entityId === entity.id).slice(-20).map((h: any, i: number) => (
-                  <div key={i} className="py-0.5">{h.action || h.type} — {h.ts || ''}</div>
-                )) || 'No history'}
+                {(history || [])
+                  .filter((h: { entityId?: string }) => h.entityId === entity.id)
+                  .slice(-20)
+                  .map((h: { action?: string; type?: string; ts?: string }, i: number) => (
+                    <div key={i} className="py-0.5">
+                      {h.action || h.type} — {h.ts || ''}
+                    </div>
+                  )) || 'No history'}
               </div>
             )}
           </div>
