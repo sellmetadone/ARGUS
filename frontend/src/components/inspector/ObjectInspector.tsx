@@ -36,6 +36,7 @@ export default function ObjectInspector() {
     setPanel,
   } = useStore();
 
+  // All hooks must run unconditionally (before any early return).
   const [tab, setTab] = useState<Tab>('data');
   const entity = entities.find((e) => e.id === selectedEntityId) ?? null;
   const rel = relationships.find((r) => r.id === selectedRelationshipId) ?? null;
@@ -372,12 +373,12 @@ export default function ObjectInspector() {
           type="button"
           className="btn btn-danger"
           onClick={() => {
-            if (window.confirm(t('insp_delete_confirm'))) {
-              const id = entity.id;
-              setSelectedEntity(null);
-              setSelectedRelationship(null);
-              removeEntity(id);
-            }
+            if (!window.confirm(t('insp_delete_confirm'))) return;
+            const id = entity.id;
+            // Clear selection first so inspector unmounts cleanly before store mutates graph
+            setSelectedEntity(null);
+            setSelectedRelationship(null);
+            queueMicrotask(() => removeEntity(id));
           }}
         >
           <Trash2 size={14} /> {t('delete')}
