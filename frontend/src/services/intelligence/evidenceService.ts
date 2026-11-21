@@ -38,7 +38,24 @@ export type EvidenceItem = {
   history: EvidenceHistoryEntry[];
 };
 
+export type EntityEvidenceRollup = {
+  entityId: string;
+  count: number;
+  corroborated: number;
+  disputed: number;
+  avgSupportScore: number;
+  strongestSupport: ConclusionSupport;
+  items: EvidenceItem[];
+};
+
 const STORAGE_KEY = 'argus.evidence.v1';
+
+const SUPPORT_SCORE: Record<ConclusionSupport, number> = {
+  none: 0,
+  weak: 1,
+  moderate: 2,
+  strong: 3,
+};
 
 function loadAll(): EvidenceItem[] {
   try {
@@ -128,6 +145,51 @@ export function linkEvidenceToEntity(evidenceId: string, entityId: string): Evid
   if (!item) return null;
   if (item.entityIds.includes(entityId)) return item;
   return updateEvidence(evidenceId, { entityIds: [...item.entityIds, entityId] }, 'link_entity');
+}
+
+export function unlinkEvidenceFromEntity(evidenceId: string, entityId: string): EvidenceItem | null {
+  const item = getEvidence(evidenceId);
+  if (!item) return null;
+  if (!item.entityIds.includes(entityId)) return item;
+  return updateEvidence(
+    evidenceId,
+    { entityIds: item.entityIds.filter((id) => id !== entityId) },
+    'unlink_entity'
+  );
+}
+
+/** Aggregate evidence strength per entity (for Inspector / graph badges). */
+export function rollupEvidenceByEntity(caseId?: string): Map<string, EntityEvidenceRollup> {
+  const items = listEvidence(caseId);
+  const map = new Map<string, EntityEvidenceRollup>();
+  for (const item of items) {
+    for (const eid of item.entityIds || []) {
+      let r = map.get(eid);
+      if (!r) {
+        r = {
+          entityId: eid,
+          count: 0,
+          corroborated: 0,
+          disputed: 0,
+          avgSupportScore: 0,
+          strongestSupport: 'none',
+          items: [],
+        };
+        map.set(eid, r);
+      }
+      r.count += 1;
+      r.items.push(item);
+      if (item.verification === 'corroborated') r.corroborated += 1;
+      if (item.verification === 'disputed' || item.verification === 'refuted') r.disputed += 1;
+      const sc = SUPPORT_SCORE[item.conclusionSupport] ?? 0;
+      if (sc > SUPPORT_SCORE[r.strongestSupport]) r.strongestSupport = item.conclusionSupport;
+    }
+  }
+  for (const r of map.values()) {
+    const sum = r.items.reduce((a, it) => a + (SUPPORT_SCORE[it.conclusionSupport] ?? 0), 0);
+    r.avgSupportScore = r.items.length ? sum / r.items.length : 0;
+  }
+  return map;
 }
 
 export function assessmentNote(item: EvidenceItem): string {
