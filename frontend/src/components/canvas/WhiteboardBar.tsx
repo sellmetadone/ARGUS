@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical,
-  Group, Frame, Trash2, Download, Square, Circle, Diamond,
+  Group, Frame, Trash2, Download, Square, Circle, Diamond, Undo2, Redo2,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { canvasEngine, type AlignMode, type ShapeVariant, STICKY_PALETTE } from '../../canvas/engine';
@@ -104,6 +104,13 @@ export default function WhiteboardBar() {
 
   return (
     <div className="whiteboard-bar" role="toolbar" aria-label="Whiteboard">
+      <button type="button" className="btn btn-icon" title="Undo (Ctrl+Z)" onClick={() => canvasEngine.undoCanvas()}>
+        <Undo2 size={14} />
+      </button>
+      <button type="button" className="btn btn-icon" title="Redo (Ctrl+Shift+Z)" onClick={() => canvasEngine.redoCanvas()}>
+        <Redo2 size={14} />
+      </button>
+      <span className="wb-sep" />
       {multi && (
         <>
           <span className="wb-count">{selectedEntityIds.length}</span>
