@@ -7,7 +7,7 @@ const boot = getInitialCaseData();
 
 export type ThemeMode = 'dark' | 'light' | 'amoled';
 export type WorkspaceLayout = 'osint' | 'infrastructure' | 'forensics' | 'geosint' | 'custom';
-export type CanvasTool = 'select' | 'hand' | 'node' | 'connect' | 'note' | 'text' | 'frame' | 'shape' | 'pen' | 'stamp';
+export type CanvasTool = 'select' | 'hand' | 'node' | 'connect' | 'note' | 'text' | 'frame' | 'shape' | 'pen' | 'stamp' | 'eraser';
 
 export interface AppearanceSettings {
   accentColor: string;
