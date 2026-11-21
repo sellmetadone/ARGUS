@@ -1,6 +1,7 @@
 /**
  * Desktop / laptop first device profile.
  * Phones get a usable fallback; primary tuning is 13–27" screens.
+ * Auto-optimizes graph rendering, minimap, motion, panel widths.
  */
 
 export type DeviceClass = 'phone' | 'tablet' | 'laptop' | 'desktop' | 'ultrawide';
@@ -26,6 +27,10 @@ export type DeviceProfile = {
   inspectorWidth: number;
   /** Collapse secondary toolbar labels under this width */
   compactToolbar: boolean;
+  /** Cap animated edges on weak devices */
+  maxAnimatedEdges: number;
+  /** Debounce ms for position flush */
+  positionFlushMs: number;
 };
 
 function clamp(n: number, min: number, max: number) {
@@ -53,22 +58,30 @@ export function detectDeviceProfile(
   else if (w < 1920) deviceClass = 'desktop';
   else deviceClass = 'ultrawide';
 
-  // Density: roomy on large monitors, compact on 13–15" laptops
   let density: Density = 'comfortable';
   if (deviceClass === 'laptop' && h < 900) density = 'compact';
   if (deviceClass === 'desktop' || deviceClass === 'ultrawide') density = 'spacious';
   if (deviceClass === 'phone' || deviceClass === 'tablet') density = 'compact';
 
-  // Scale: slight bump on high-DPI laptop panels, never aggressive zoom via body
   let uiScale = 1;
-  if (deviceClass === 'laptop' && dpr >= 1.5 && w >= 1280) uiScale = 1;
   if (deviceClass === 'ultrawide' && w >= 2560) uiScale = 1.05;
-  if (deviceClass === 'phone') uiScale = 1;
 
   const sidebarWidth =
     deviceClass === 'phone' ? 0 : deviceClass === 'tablet' ? 220 : deviceClass === 'laptop' ? 260 : 280;
   const inspectorWidth =
     deviceClass === 'phone' ? 0 : deviceClass === 'tablet' ? 280 : deviceClass === 'laptop' ? 320 : 360;
+
+  const pixelBudget = w * h * dpr;
+  const onlyRenderVisible =
+    deviceClass === 'phone' ||
+    deviceClass === 'tablet' ||
+    deviceClass === 'laptop' ||
+    pixelBudget > 1_200_000;
+
+  const maxAnimatedEdges =
+    reduceMotion || deviceClass === 'phone' ? 0 : deviceClass === 'tablet' ? 12 : deviceClass === 'laptop' ? 40 : 80;
+
+  const positionFlushMs = deviceClass === 'phone' || coarsePointer ? 120 : 80;
 
   return {
     class: deviceClass,
@@ -78,12 +91,14 @@ export function detectDeviceProfile(
     dpr: clamp(dpr, 1, 3),
     coarsePointer,
     reduceMotion,
-    onlyRenderVisible: deviceClass === 'laptop' || deviceClass === 'desktop' || w * h > 1_200_000,
+    onlyRenderVisible,
     showMinimap: deviceClass === 'desktop' || deviceClass === 'ultrawide' || (deviceClass === 'laptop' && w >= 1366),
     uiScale,
     sidebarWidth,
     inspectorWidth,
     compactToolbar: w < 1280,
+    maxAnimatedEdges,
+    positionFlushMs,
   };
 }
 

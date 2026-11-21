@@ -75,19 +75,50 @@ export function buildCaseSummaryPrompt(payload: {
   relationshipCount: number;
   topLabels: string[];
   graphMetrics?: string;
+  evidenceCount?: number;
+  correlationHints?: string[];
 }): AiPromptPreview {
   const system =
     'You are an OSINT analysis assistant. Mark every inference as unconfirmed. Never invent sources. Never claim identity resolution. Reply in the user language.';
   const user = [
     `Case: ${payload.caseName}`,
     `Entities: ${payload.entityCount}, relationships: ${payload.relationshipCount}`,
+    payload.evidenceCount != null ? `Evidence items: ${payload.evidenceCount}` : '',
     `Sample labels: ${payload.topLabels.join(', ')}`,
     payload.graphMetrics ? `Graph metrics: ${payload.graphMetrics}` : '',
+    payload.correlationHints?.length
+      ? `Correlation hints (unconfirmed): ${payload.correlationHints.slice(0, 8).join(' | ')}`
+      : '',
     'Write a short neutral summary of the graph structure and suggest next investigative questions. Do not treat hypotheses as facts.',
   ]
     .filter(Boolean)
     .join('\n');
   return { system, user, approxChars: system.length + user.length };
+}
+
+/** Offline fallback when Ollama is unavailable — structured bullet summary only. */
+export function offlineCaseDigest(payload: {
+  caseName: string;
+  entityCount: number;
+  relationshipCount: number;
+  topLabels: string[];
+  evidenceCount?: number;
+}): string {
+  const labels = payload.topLabels.slice(0, 12).join(', ') || '—';
+  return [
+    `[Offline digest — not AI-generated]`,
+    `Case: ${payload.caseName}`,
+    `• Entities: ${payload.entityCount}`,
+    `• Relationships: ${payload.relationshipCount}`,
+    `• Evidence items: ${payload.evidenceCount ?? 0}`,
+    `• Sample labels: ${labels}`,
+    ``,
+    `Suggested checks:`,
+    `1. Run Correlation for duplicate labels / shared properties.`,
+    `2. Attach evidence to key entities and set verification status.`,
+    `3. Use Timeline filter if events have dates.`,
+    `4. Review low-confidence edges before treating them as established.`,
+  ].join('\n');
 }
 
 export function truncateContext(text: string, maxChars: number): string {
