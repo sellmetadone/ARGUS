@@ -16,6 +16,10 @@ export interface EntityNodeData {
   highlighted?: boolean;
   pinned?: boolean;
   dimmed?: boolean;
+  /** Linked evidence count (from rollup) */
+  evidenceCount?: number;
+  /** Strongest conclusion support among linked evidence */
+  evidenceSupport?: 'none' | 'weak' | 'moderate' | 'strong';
   [key: string]: unknown;
 }
 
@@ -37,6 +41,13 @@ const HANDLE_SIDES: { position: Position; id: string }[] = [
   { position: Position.Bottom, id: 'bottom' },
   { position: Position.Left, id: 'left' },
 ];
+
+const SUPPORT_CLASS: Record<string, string> = {
+  none: 'ev-none',
+  weak: 'ev-weak',
+  moderate: 'ev-moderate',
+  strong: 'ev-strong',
+};
 
 const ConnectionHandles = memo(function ConnectionHandles({ color }: { color: string }) {
   const base = useMemo<CSSProperties>(
@@ -81,6 +92,8 @@ function EntityNodeInner({ data, selected }: NodeProps) {
   const dimmed = Boolean(nodeData.dimmed);
   const title = String(nodeData.label || 'Untitled entity');
   const typeLabel = String(nodeData.entityType || 'entity').replace(/_/g, ' ');
+  const evCount = Number(nodeData.evidenceCount) || 0;
+  const evSupport = nodeData.evidenceSupport || 'none';
 
   const style = useMemo(
     () =>
@@ -99,7 +112,7 @@ function EntityNodeInner({ data, selected }: NodeProps) {
     <article
       className={`argus-entity-node${active ? ' is-active' : ''}${nodeData.pinned ? ' is-pinned' : ''}${dimmed ? ' is-dimmed' : ''}`}
       style={style}
-      title={`${typeLabel}: ${title}`}
+      title={`${typeLabel}: ${title}${evCount ? ` · evidence ${evCount}` : ''}`}
       aria-label={`${typeLabel}: ${title}`}
     >
       <ConnectionHandles color={color} />
@@ -122,6 +135,15 @@ function EntityNodeInner({ data, selected }: NodeProps) {
           {nodeData.subtitle ? <span className="argus-node-subtitle">{nodeData.subtitle}</span> : null}
         </div>
         {nodeData.pinned ? <span className="argus-node-pin" title="Pinned" aria-label="Pinned" /> : null}
+        {evCount > 0 ? (
+          <span
+            className={`argus-node-ev-badge ${SUPPORT_CLASS[evSupport] || 'ev-none'}`}
+            title={`Evidence: ${evCount} (${evSupport})`}
+            aria-label={`Evidence ${evCount}`}
+          >
+            {evCount > 9 ? '9+' : evCount}
+          </span>
+        ) : null}
       </div>
     </article>
   );
@@ -138,7 +160,9 @@ function propsEqual(a: NodeProps, b: NodeProps): boolean {
     da.selected === db.selected &&
     da.highlighted === db.highlighted &&
     da.pinned === db.pinned &&
-    da.dimmed === db.dimmed
+    da.dimmed === db.dimmed &&
+    da.evidenceCount === db.evidenceCount &&
+    da.evidenceSupport === db.evidenceSupport
   );
 }
 
