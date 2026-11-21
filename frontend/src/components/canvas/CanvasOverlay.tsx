@@ -47,7 +47,6 @@ export default function CanvasOverlay() {
       const { flowX, flowY, screenX, screenY } = e.detail || {};
       if (typeof flowX !== 'number') return;
 
-      // Double-click / double right-click → create entity
       if (canvasTool === 'select' || canvasTool === 'node' || canvasTool === 'hand' || canvasTool === 'connect') {
         setPicker({ screenX, screenY, flowX, flowY });
         return;
@@ -65,8 +64,7 @@ export default function CanvasOverlay() {
         return;
       }
       if (canvasTool === 'note') {
-        const text = window.prompt('Note', '') ?? '';
-        if (text.trim()) canvasEngine.addNote(flowX, flowY, text.trim());
+        canvasEngine.addNote(flowX, flowY, 'Note');
         setCanvasTool('select');
         return;
       }
@@ -101,8 +99,7 @@ export default function CanvasOverlay() {
       } else if (canvasTool === 'shape' && typeof (canvasEngine as { addShape?: Function }).addShape === 'function') {
         (canvasEngine as { addShape: Function }).addShape(flow.x - 80, flow.y - 50, 160, 100);
       } else if (canvasTool === 'note') {
-        const text = window.prompt('Note', '') ?? '';
-        if (text.trim()) canvasEngine.addNote(flow.x, flow.y, text.trim());
+        canvasEngine.addNote(flow.x, flow.y, 'Note');
       } else if (canvasTool === 'text') {
         const text = window.prompt('Text', '') ?? '';
         if (text.trim()) canvasEngine.addText(flow.x, flow.y, text.trim());
@@ -119,19 +116,19 @@ export default function CanvasOverlay() {
   }, [canvasTool, setCanvasTool]);
 
   useEffect(() => {
-    if (canvasTool !== 'pen') return;
-    const eng = canvasEngine as {
-      beginStroke?: (x: number, y: number) => string;
-      appendStrokePoint?: (id: string, x: number, y: number) => void;
-      endStroke?: (id: string) => void;
-    };
-    if (!eng.beginStroke) return;
+    if (canvasTool !== 'pen' && canvasTool !== 'eraser') return;
     const onDown = (ev: MouseEvent) => {
       const target = ev.target as HTMLElement;
       if (!target.closest?.('.react-flow__pane')) return;
       const flow = flowFromClient(ev.clientX, ev.clientY, target);
       if (!flow) return;
-      strokeIdRef.current = eng.beginStroke!(flow.x, flow.y);
+      if (canvasTool === 'eraser') {
+        canvasEngine.eraseNear(flow.x, flow.y, 22);
+        strokeIdRef.current = 'erasing';
+        ev.preventDefault();
+        return;
+      }
+      strokeIdRef.current = canvasEngine.beginStroke(flow.x, flow.y);
       ev.preventDefault();
     };
     const onMove = (ev: MouseEvent) => {
@@ -140,13 +137,17 @@ export default function CanvasOverlay() {
       if (!target) return;
       const flow = flowFromClient(ev.clientX, ev.clientY, target);
       if (!flow) return;
-      eng.appendStrokePoint?.(strokeIdRef.current, flow.x, flow.y);
+      if (canvasTool === 'eraser' || strokeIdRef.current === 'erasing') {
+        canvasEngine.eraseNear(flow.x, flow.y, 22);
+        return;
+      }
+      canvasEngine.appendStrokePoint(strokeIdRef.current, flow.x, flow.y);
     };
     const onUp = () => {
-      if (strokeIdRef.current) {
-        eng.endStroke?.(strokeIdRef.current);
-        strokeIdRef.current = null;
+      if (strokeIdRef.current && strokeIdRef.current !== 'erasing') {
+        canvasEngine.endStroke(strokeIdRef.current);
       }
+      strokeIdRef.current = null;
     };
     window.addEventListener('mousedown', onDown, true);
     window.addEventListener('mousemove', onMove);
@@ -157,6 +158,35 @@ export default function CanvasOverlay() {
       window.removeEventListener('mouseup', onUp);
     };
   }, [canvasTool]);
+
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      const tag = (ev.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (ev.target as HTMLElement)?.isContentEditable) return;
+      if (ev.metaKey || ev.ctrlKey) {
+        if (ev.key === 'z' && !ev.shiftKey) {
+          ev.preventDefault();
+          canvasEngine.undoCanvas();
+          return;
+        }
+        if ((ev.key === 'z' && ev.shiftKey) || ev.key === 'y') {
+          ev.preventDefault();
+          canvasEngine.redoCanvas();
+          return;
+        }
+      }
+      const map: Record<string, typeof canvasTool> = {
+        v: 'select', h: 'hand', n: 'note', f: 'frame', p: 'pen', e: 'eraser',
+        s: 'shape', t: 'text', c: 'connect',
+      };
+      const k = ev.key.toLowerCase();
+      if (map[k] && !ev.metaKey && !ev.ctrlKey && !ev.altKey) {
+        setCanvasTool(map[k]);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [setCanvasTool]);
 
   const onPickType = useCallback(
     (type: EntityType) => {
