@@ -1,4 +1,15 @@
-import { FolderOpen, Plus, ChevronLeft, ChevronRight, Search as SearchIcon, Settings, Network, Trash2, Eraser, Pencil } from 'lucide-react';
+import {
+  FolderOpen,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Search as SearchIcon,
+  Settings,
+  Network,
+  Trash2,
+  Eraser,
+  Pencil,
+} from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useT } from '../../i18n/useT';
 
@@ -14,13 +25,15 @@ export default function Sidebar() {
     removeCase,
     renameCase,
     clearCaseData,
-    appearance,
   } = useStore();
 
   const collapsed = !panels.sidebar;
 
   const handleNewCase = () => {
-    const name = window.prompt(t('case_name_prompt'), `${t('investigation')} #${String(cases.length + 1).padStart(3, '0')}`);
+    const name = window.prompt(
+      t('case_name_prompt'),
+      `${t('investigation')} #${String(cases.length + 1).padStart(3, '0')}`
+    );
     if (name === null) return;
     const id = `case-${Date.now()}`;
     addCase({
@@ -54,119 +67,129 @@ export default function Sidebar() {
 
   if (collapsed) {
     return (
-      <div
-        style={{
-          width: 48,
-          background: 'var(--panel)',
-          borderRight: '1px solid var(--border)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          paddingTop: 12,
-          gap: 8,
-        }}
-      >
-        <button type="button" onClick={() => togglePanel('sidebar')} className="btn btn-ghost" style={{ padding: 8 }}>
+      <aside className="argus-sidebar argus-sidebar--rail" aria-label={t('cases')}>
+        <button
+          type="button"
+          className="btn btn-ghost btn-icon"
+          onClick={() => togglePanel('sidebar')}
+          title={t('expand') || 'Expand'}
+          aria-label={t('expand') || 'Expand sidebar'}
+        >
           <ChevronRight size={18} />
         </button>
-        <button type="button" onClick={() => togglePanel('search')} className="btn btn-ghost" style={{ padding: 8 }} title={t('search')}>
-          <SearchIcon size={16} />
+        <button
+          type="button"
+          className="btn btn-ghost btn-icon"
+          onClick={() => togglePanel('search')}
+          title={t('search')}
+          aria-label={t('search')}
+        >
+          <SearchIcon size={18} />
         </button>
-        <button type="button" onClick={() => togglePanel('settings')} className="btn btn-ghost" style={{ padding: 8 }} title={t('settings')}>
-          <Settings size={16} />
+        <button
+          type="button"
+          className="btn btn-ghost btn-icon"
+          onClick={() => togglePanel('settings')}
+          title={t('settings')}
+          aria-label={t('settings')}
+        >
+          <Settings size={18} />
         </button>
-        <button type="button" onClick={handleNewCase} className="btn btn-ghost" style={{ padding: 8 }} title={t('new_case')}>
-          <Plus size={16} />
+        <button
+          type="button"
+          className="btn btn-filled btn-icon sidebar-fab-rail"
+          onClick={handleNewCase}
+          title={t('new_case')}
+          aria-label={t('new_case')}
+        >
+          <Plus size={18} />
         </button>
-      </div>
+      </aside>
     );
   }
 
   return (
-    <div
-      style={{
-        width: 280,
-        background: 'var(--panel)',
-        borderRight: '1px solid var(--border)',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        color: 'var(--text)',
-      }}
-    >
-      <div
-        style={{
-          padding: '16px 16px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FolderOpen size={18} color={appearance.accentColor} />
-          <span style={{ fontWeight: 600, fontSize: 13, letterSpacing: 0.5 }}>
-            {t('cases').toUpperCase()}
+    <aside className="argus-sidebar argus-sidebar--expanded" aria-label={t('cases')}>
+      <header className="sidebar-header">
+        <div className="sidebar-header-title">
+          <span className="sidebar-header-icon" aria-hidden="true">
+            <FolderOpen size={18} />
           </span>
+          <span className="md-label-medium sidebar-header-label">{t('cases')}</span>
         </div>
-        <button type="button" className="btn btn-ghost" onClick={() => togglePanel('sidebar')} style={{ padding: 4 }}>
-          <ChevronLeft size={16} />
+        <button
+          type="button"
+          className="btn btn-ghost btn-icon"
+          onClick={() => togglePanel('sidebar')}
+          aria-label={t('collapse') || 'Collapse sidebar'}
+        >
+          <ChevronLeft size={18} />
         </button>
-      </div>
+      </header>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-        {cases.length === 0 && (
-          <div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>{t('cases_empty')}</div>
-        )}
-        {cases.map((c) => (
-          <div
-            key={c.id}
-            onClick={() => setActiveCase(c.id)}
-            style={{
-              padding: '10px 12px',
-              background: activeCaseId === c.id ? 'var(--accent-soft)' : 'transparent',
-              borderLeft:
-                activeCaseId === c.id ? `3px solid ${appearance.accentColor}` : '3px solid transparent',
-              cursor: 'pointer',
-              color: activeCaseId === c.id ? 'var(--text)' : 'var(--text-muted)',
-            }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>{c.name}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>
-              {c.status === 'open'
-                ? t('status_open')
-                : c.status === 'closed'
-                  ? t('status_closed')
-                  : t('status_archived')}
+      <div className="sidebar-case-list">
+        {cases.length === 0 && <div className="sidebar-empty">{t('cases_empty')}</div>}
+        {cases.map((c) => {
+          const active = activeCaseId === c.id;
+          return (
+            <div
+              key={c.id}
+              role="button"
+              tabIndex={0}
+              className={`sidebar-case${active ? ' is-active' : ''}`}
+              onClick={() => setActiveCase(c.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setActiveCase(c.id);
+                }
+              }}
+            >
+              <div className="sidebar-case-name">{c.name}</div>
+              <div className="sidebar-case-status">
+                {c.status === 'open'
+                  ? t('status_open')
+                  : c.status === 'closed'
+                    ? t('status_closed')
+                    : t('status_archived')}
+              </div>
+              <div className="sidebar-case-actions" onClick={(e) => e.stopPropagation()}>
+                <MiniBtn title={t('rename')} onClick={(e) => handleRename(c.id, c.name, e)}>
+                  <Pencil size={12} />
+                </MiniBtn>
+                <MiniBtn title={t('clear_graph')} onClick={(e) => handleClear(c.id, e)}>
+                  <Eraser size={12} />
+                </MiniBtn>
+                <MiniBtn title={t('delete')} danger onClick={(e) => handleDeleteCase(c.id, c.name, e)}>
+                  <Trash2 size={12} />
+                </MiniBtn>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 4 }} onClick={(e) => e.stopPropagation()}>
-              <MiniBtn title={t('rename')} onClick={(e) => handleRename(c.id, c.name, e)}>
-                <Pencil size={12} />
-              </MiniBtn>
-              <MiniBtn title={t('clear_graph')} onClick={(e) => handleClear(c.id, e)}>
-                <Eraser size={12} />
-              </MiniBtn>
-              <MiniBtn title={t('delete')} danger onClick={(e) => handleDeleteCase(c.id, c.name, e)}>
-                <Trash2 size={12} />
-              </MiniBtn>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <div style={{ padding: 8, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <NavBtn icon={<SearchIcon size={14} />} label={t('search')} onClick={() => togglePanel('search')} />
-        <NavBtn icon={<Network size={14} />} label={t('graph')} onClick={() => setActiveCase(activeCaseId)} />
-        <NavBtn icon={<Settings size={14} />} label={t('settings')} onClick={() => togglePanel('settings')} />
-      </div>
+      <nav className="sidebar-nav">
+        <NavBtn icon={<SearchIcon size={16} />} label={t('search')} onClick={() => togglePanel('search')} />
+        <NavBtn
+          icon={<Network size={16} />}
+          label={t('graph')}
+          onClick={() => setActiveCase(activeCaseId)}
+        />
+        <NavBtn
+          icon={<Settings size={16} />}
+          label={t('settings')}
+          onClick={() => togglePanel('settings')}
+        />
+      </nav>
 
-      <div style={{ padding: 12, borderTop: '1px solid var(--border)' }}>
-        <button type="button" className="btn btn-primary" onClick={handleNewCase} style={{ width: '100%' }}>
+      <div className="sidebar-footer">
+        <button type="button" className="btn btn-filled" onClick={handleNewCase}>
           <Plus size={16} />
           {t('new_case')}
         </button>
       </div>
-    </div>
+    </aside>
   );
 }
 
@@ -182,17 +205,30 @@ function MiniBtn({
   danger?: boolean;
 }) {
   return (
-    <button type="button" title={title} onClick={onClick} className={danger ? 'btn btn-danger' : 'btn btn-secondary'} style={{ padding: '3px 6px' }}>
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className={`btn btn-icon sidebar-mini ${danger ? 'btn-danger' : 'btn-secondary'}`}
+    >
       {children}
     </button>
   );
 }
 
-function NavBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+function NavBtn({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
   return (
-    <button type="button" onClick={onClick} className="btn btn-ghost" style={{ width: '100%', justifyContent: 'flex-start', gap: 8 }}>
+    <button type="button" onClick={onClick} className="btn btn-ghost sidebar-nav-btn">
       {icon}
-      {label}
+      <span>{label}</span>
     </button>
   );
 }
