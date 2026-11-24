@@ -2,6 +2,7 @@ import { StrictMode, Component, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ReactFlowProvider } from '@xyflow/react'
 import './index.css'
+import './styles/m3-panels.css'
 import App from './App.tsx'
 import { registerBuiltinModules } from './core/moduleRegistry'
 
@@ -20,30 +21,10 @@ class RootErrorBoundary extends Component<
   render() {
     if (this.state.error) {
       return (
-        <div
-          style={{
-            padding: 24,
-            fontFamily: 'system-ui, sans-serif',
-            background: '#020617',
-            color: '#e2e8f0',
-            minHeight: '100vh',
-          }}
-        >
-          <h1 style={{ fontSize: 18, marginBottom: 12 }}>ARGUS failed to start</h1>
-          <pre
-            style={{
-              whiteSpace: 'pre-wrap',
-              background: '#1e293b',
-              padding: 16,
-              borderRadius: 8,
-              fontSize: 12,
-              color: '#fca5a5',
-            }}
-          >
-            {this.state.error.message}
-            {'\n'}
-            {this.state.error.stack}
-          </pre>
+        <div style={{ padding: 24, fontFamily: 'system-ui', color: '#e2e8f0', background: '#0f172a', minHeight: '100vh' }}>
+          <h1 style={{ fontSize: 18 }}>ARGUS failed to start</h1>
+          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 13, opacity: 0.9 }}>{String(this.state.error?.message || this.state.error)}</pre>
+          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 11, opacity: 0.6, marginTop: 12 }}>{this.state.error?.stack}</pre>
         </div>
       )
     }
@@ -51,10 +32,7 @@ class RootErrorBoundary extends Component<
   }
 }
 
-const root = document.getElementById('root')
-if (!root) throw new Error('Missing #root')
-
-createRoot(root).render(
+createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <RootErrorBoundary>
       <ReactFlowProvider>
