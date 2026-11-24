@@ -13,7 +13,6 @@ export default function WelcomeScreen() {
     cases,
     importGraph,
     setPanel,
-    appearance,
   } = useStore();
 
   const enterApp = () => setShowWelcome(false);
@@ -69,63 +68,79 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 2000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: appearance.theme === 'light'
-          ? 'radial-gradient(ellipse at 30% 20%, #e8eef5 0%, #F7F7F5 55%, #e7e8e5 100%)'
-          : 'radial-gradient(ellipse at 30% 20%, #1e1b4b 0%, #020617 55%, #000 100%)',
-      }}
-    >
-      <div
-        style={{
-          width: 400,
-          maxWidth: '92vw',
-          background: 'var(--panel)',
-          border: '1px solid var(--border)',
-          borderRadius: 14,
-          padding: '32px 28px 24px',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.12)',
-          color: 'var(--text)',
-        }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+    <div className="welcome-screen" role="dialog" aria-modal="true" aria-label={t('app_name')}>
+      <div className="welcome-card">
+        <div className="welcome-hero">
           <img
+            className="welcome-logo"
             src="/argus_logo.svg"
             alt="ARGUS"
             width={72}
             height={72}
-            style={{ display: 'block', margin: '0 auto 14px', borderRadius: 12 }}
             onError={(e) => {
               (e.target as HTMLImageElement).src = '/favicon.svg';
             }}
           />
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: 4 }}>{t('app_name')}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>{t('welcome_tagline')}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.55 }}>
-            by <span style={{ color: 'var(--accent)' }}>sellmetadone</span>
+          <h1 className="welcome-title md-title-large">{t('app_name')}</h1>
+          <p className="welcome-tagline md-body-medium">{t('welcome_tagline')}</p>
+          <p className="welcome-byline md-label-medium">
+            by <span className="welcome-accent">sellmetadone</span>
             <br />
-            <a href="https://t.me/sofia_white_death" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>@sofia_white_death</a>
+            <a href="https://t.me/sofia_white_death" target="_blank" rel="noreferrer">
+              @sofia_white_death
+            </a>
             {' · '}
-            <a href="https://t.me/argus_platform" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>t.me/argus_platform</a>
-          </div>
+            <a href="https://t.me/argus_platform" target="_blank" rel="noreferrer">
+              t.me/argus_platform
+            </a>
+          </p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <MenuBtn icon={<Plus size={17} strokeWidth={2} />} title={t('welcome_new')} subtitle={t('welcome_new_sub')} accent={appearance.accentColor} onClick={newCanvas} />
-          <MenuBtn icon={<FolderOpen size={17} strokeWidth={2} />} title={t('welcome_load')} subtitle={t('welcome_load_sub')} accent={appearance.accentColor} onClick={() => fileRef.current?.click()} />
-          <MenuBtn icon={<GraduationCap size={17} strokeWidth={2} />} title={t('welcome_tutorial')} subtitle={t('welcome_tutorial_sub')} accent={appearance.accentColor} onClick={() => { setShowWelcome(false); setPanel('tutorial', true); }} />
-          <MenuBtn icon={<Settings size={17} strokeWidth={2} />} title={t('settings')} subtitle={t('welcome_settings_sub')} accent={appearance.accentColor} onClick={() => { setShowWelcome(false); setPanel('settings', true); }} />
+        <div className="welcome-actions">
+          <MenuBtn
+            icon={<Plus size={18} strokeWidth={2} />}
+            title={t('welcome_new')}
+            subtitle={t('welcome_new_sub')}
+            onClick={newCanvas}
+          />
+          <MenuBtn
+            icon={<FolderOpen size={18} strokeWidth={2} />}
+            title={t('welcome_load')}
+            subtitle={t('welcome_load_sub')}
+            onClick={() => fileRef.current?.click()}
+          />
+          <MenuBtn
+            icon={<GraduationCap size={18} strokeWidth={2} />}
+            title={t('welcome_tutorial')}
+            subtitle={t('welcome_tutorial_sub')}
+            onClick={() => {
+              setShowWelcome(false);
+              setPanel('tutorial', true);
+            }}
+          />
+          <MenuBtn
+            icon={<Settings size={18} strokeWidth={2} />}
+            title={t('settings')}
+            subtitle={t('welcome_settings_sub')}
+            onClick={() => {
+              setShowWelcome(false);
+              setPanel('settings', true);
+            }}
+          />
         </div>
 
-        <input ref={fileRef} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) loadCanvas(f); }} />
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".json,application/json"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) loadCanvas(f);
+          }}
+        />
 
-        <button type="button" className="btn btn-secondary" onClick={enterApp} style={{ marginTop: 18, width: '100%' }}>
+        <button type="button" className="btn btn-filled welcome-continue" onClick={enterApp}>
           {t('welcome_continue')}
         </button>
       </div>
@@ -134,35 +149,25 @@ export default function WelcomeScreen() {
 }
 
 function MenuBtn({
-  icon, title, subtitle, onClick, accent,
+  icon,
+  title,
+  subtitle,
+  onClick,
 }: {
-  icon: React.ReactNode; title: string; subtitle: string; onClick: () => void; accent: string;
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 14px',
-        textAlign: 'left', background: 'transparent', border: '1px solid var(--border)',
-        borderRadius: 8, cursor: 'pointer', color: 'inherit',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = accent;
-        e.currentTarget.style.background = `${accent}14`;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'var(--border)';
-        e.currentTarget.style.background = 'transparent';
-      }}
-    >
-      <div style={{ width: 36, height: 36, borderRadius: 8, background: `${accent}20`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+    <button type="button" className="welcome-menu-btn" onClick={onClick}>
+      <span className="welcome-menu-icon" aria-hidden="true">
         {icon}
-      </div>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{title}</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{subtitle}</div>
-      </div>
+      </span>
+      <span className="welcome-menu-copy">
+        <span className="welcome-menu-title">{title}</span>
+        <span className="welcome-menu-sub">{subtitle}</span>
+      </span>
     </button>
   );
 }

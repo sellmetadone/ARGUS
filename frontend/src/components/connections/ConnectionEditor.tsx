@@ -46,7 +46,7 @@ export default function ConnectionEditor() {
   const status = String(rel.properties?.status || 'unknown');
   const lineStyle = String(rel.properties?.lineStyle || 'solid');
   const description = String(rel.properties?.description || '');
-  const direction = String(rel.properties?.direction || 'forward'); // forward | reverse | bidirectional
+  const direction = String(rel.properties?.direction || 'forward');
 
   const patchProps = (partial: Record<string, string | number>) => {
     updateRelationship(rel.id, {
@@ -62,60 +62,44 @@ export default function ConnectionEditor() {
   };
 
   return (
-    <div
-      className="argus-panel"
-      style={{
-        width: 340,
-        background: 'var(--panel)',
-        borderLeft: '1px solid var(--border)',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        color: 'var(--text)',
-      }}
-    >
-      <div
-        style={{
-          padding: '12px 14px',
-          borderBottom: '1px solid var(--border)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 0.5 }}>
-          {t('connection_editor')}
-        </span>
+    <div className="conn-editor argus-panel">
+      <header className="conn-editor-header">
+        <span className="conn-editor-title md-label-medium">{t('connection_editor')}</span>
         <button
           type="button"
-          className="btn btn-ghost"
+          className="btn btn-ghost btn-icon"
           onClick={() => setSelectedRelationship(null)}
-          style={{ padding: 4 }}
+          aria-label={t('close') || 'Close'}
         >
-          <X size={16} />
+          <X size={18} />
         </button>
-      </div>
+      </header>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: 14, fontSize: 12 }}>
-        <div style={{ marginBottom: 12, padding: 10, background: 'var(--bg)', borderRadius: 6, border: '1px solid var(--border)' }}>
-          <div style={{ color: 'var(--text)', fontWeight: 500 }}>{sourceEntity?.label || rel.sourceId}</div>
-          <div style={{ color: 'var(--text-muted)', margin: '4px 0', fontSize: 11 }}>→</div>
-          <div style={{ color: 'var(--text)', fontWeight: 500 }}>{targetEntity?.label || rel.targetId}</div>
+      <div className="conn-editor-body">
+        <div className="conn-endpoints">
+          <div className="conn-endpoint-label">{sourceEntity?.label || rel.sourceId}</div>
+          <div className="conn-arrow" aria-hidden="true">
+            →
+          </div>
+          <div className="conn-endpoint-label">{targetEntity?.label || rel.targetId}</div>
           <button
             type="button"
-            className="btn btn-secondary"
-            style={{ marginTop: 8, width: '100%' }}
+            className="btn btn-outlined"
+            style={{ width: '100%', marginTop: 10 }}
             onClick={() => setHighlightedPath([rel.sourceId, rel.targetId])}
           >
             {t('rel_highlight')}
           </button>
         </div>
 
-        <label style={fieldLabel}>{t('rel_type')}</label>
+        <label className="conn-field-label" htmlFor="conn-type">
+          {t('rel_type')}
+        </label>
         <select
+          id="conn-type"
+          className="conn-input"
           value={rel.type}
           onChange={(e) => updateRelationship(rel.id, { type: e.target.value as RelationshipType })}
-          style={inputStyle}
         >
           {RELATIONSHIP_TYPES.map((rt) => (
             <option key={rt} value={rt}>
@@ -124,60 +108,60 @@ export default function ConnectionEditor() {
           ))}
         </select>
 
-        <label style={fieldLabel}>{t('rel_status')}</label>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+        <span className="conn-field-label">{t('rel_status')}</span>
+        <div className="conn-chip-row">
           {STATUS_OPTIONS.map((s) => (
             <button
               key={s.value}
               type="button"
-              className={`btn ${status === s.value ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ fontSize: 11, padding: '4px 8px' }}
+              className={`btn conn-chip ${status === s.value ? 'btn-filled' : 'btn-outlined'}`}
               onClick={() => patchProps({ status: s.value })}
             >
               {t(s.labelKey)}
             </button>
           ))}
         </div>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 12px' }}>
-          {t('rel_status_disclaimer')}
-        </p>
+        <p className="conn-hint">{t('rel_status_disclaimer')}</p>
 
-        <label style={fieldLabel}>{t('rel_confidence')} · {rel.confidence ?? 50}%</label>
+        <label className="conn-field-label" htmlFor="conn-confidence">
+          {t('rel_confidence')} · {rel.confidence ?? 50}%
+        </label>
         <input
+          id="conn-confidence"
+          className="conn-range"
           type="range"
           min={0}
           max={100}
           value={rel.confidence ?? 50}
           onChange={(e) => updateRelationship(rel.id, { confidence: Number(e.target.value) })}
-          style={{ width: '100%', marginBottom: 12 }}
         />
 
-        <label style={fieldLabel}>{t('rel_direction')}</label>
-        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+        <span className="conn-field-label">{t('rel_direction')}</span>
+        <div className="conn-chip-row">
           {(['forward', 'bidirectional'] as const).map((d) => (
             <button
               key={d}
               type="button"
-              className={`btn ${direction === d ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ fontSize: 11, flex: 1 }}
+              className={`btn conn-chip ${direction === d ? 'btn-filled' : 'btn-outlined'}`}
+              style={{ flex: 1 }}
               onClick={() => patchProps({ direction: d })}
             >
               {t(d === 'forward' ? 'rel_dir_forward' : 'rel_dir_bi')}
             </button>
           ))}
         </div>
-        <button type="button" className="btn btn-secondary" style={{ width: '100%', marginBottom: 12 }} onClick={swapDirection}>
+        <button type="button" className="btn btn-outlined" style={{ width: '100%', marginBottom: 12 }} onClick={swapDirection}>
           <ArrowRightLeft size={14} /> {t('rel_swap')}
         </button>
 
-        <label style={fieldLabel}>{t('rel_line_style')}</label>
-        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        <span className="conn-field-label">{t('rel_line_style')}</span>
+        <div className="conn-chip-row" style={{ marginBottom: 12 }}>
           {STYLE_OPTIONS.map((s) => (
             <button
               key={s.value}
               type="button"
-              className={`btn ${lineStyle === s.value ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ fontSize: 11, flex: 1 }}
+              className={`btn conn-chip ${lineStyle === s.value ? 'btn-filled' : 'btn-outlined'}`}
+              style={{ flex: 1 }}
               onClick={() => patchProps({ lineStyle: s.value })}
             >
               {t(s.labelKey)}
@@ -185,25 +169,31 @@ export default function ConnectionEditor() {
           ))}
         </div>
 
-        <label style={fieldLabel}>{t('rel_source')}</label>
+        <label className="conn-field-label" htmlFor="conn-source">
+          {t('rel_source')}
+        </label>
         <input
+          id="conn-source"
+          className="conn-input"
           value={rel.source || ''}
           onChange={(e) => updateRelationship(rel.id, { source: e.target.value })}
           placeholder={t('rel_source_ph')}
-          style={inputStyle}
         />
 
-        <label style={fieldLabel}>{t('rel_description')}</label>
+        <label className="conn-field-label" htmlFor="conn-desc">
+          {t('rel_description')}
+        </label>
         <textarea
+          id="conn-desc"
+          className="conn-input conn-textarea"
           value={description}
           onChange={(e) => patchProps({ description: e.target.value })}
           placeholder={t('rel_description_ph')}
           rows={3}
-          style={{ ...inputStyle, resize: 'vertical' }}
         />
 
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
-          ID: <span className="mono">{rel.id}</span>
+        <div className="conn-id">
+          ID: <code>{rel.id}</code>
         </div>
 
         <button
@@ -220,24 +210,3 @@ export default function ConnectionEditor() {
     </div>
   );
 }
-
-const fieldLabel: React.CSSProperties = {
-  display: 'block',
-  fontSize: 11,
-  fontWeight: 600,
-  color: 'var(--text-muted)',
-  marginBottom: 4,
-  marginTop: 4,
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '7px 10px',
-  marginBottom: 10,
-  background: 'var(--bg)',
-  border: '1px solid var(--border)',
-  borderRadius: 6,
-  color: 'var(--text)',
-  fontSize: 12,
-  boxSizing: 'border-box',
-};
