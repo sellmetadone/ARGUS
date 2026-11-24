@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { ReactFlowProvider } from '@xyflow/react'
 import './index.css'
 import './styles/m3-panels.css'
+import './styles/m3-sidebar.css'
 import App from './App.tsx'
 import { registerBuiltinModules } from './core/moduleRegistry'
 
