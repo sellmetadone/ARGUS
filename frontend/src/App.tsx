@@ -19,7 +19,6 @@ import MapPanel from './components/map/MapPanel';
 import { useStore } from './store/useStore';
 import { Map, Clock, Search, Settings, Undo2, Redo2, Download, Workflow, Network, FileText, GitCompare, Bot } from 'lucide-react';
 import { useT } from './i18n/useT';
-import { LANG_META, type LangCode } from './i18n/locales';
 import { useDeviceProfile } from './hooks/useDeviceProfile';
 
 export default function App() {
@@ -58,6 +57,8 @@ export default function App() {
 
   const shellClass = ['argus-shell', device.compactToolbar ? 'compact-toolbar' : ''].filter(Boolean).join(' ');
   const showToolbarLabel = !device.compactToolbar;
+  // M3: keep navigation rail mounted when "collapsed"; only hide fully on phone
+  const showSidebarChrome = device.class !== 'phone';
 
   return (
     <div className={shellClass} style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -67,20 +68,24 @@ export default function App() {
         </div>
       )}
       {themeFlash && <div className="theme-flash" />}
-      <header style={{ height: 'var(--header-h)', background: 'var(--header-bg)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', flexShrink: 0, gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          <img src="/argus_logo.svg" alt="Argus" width={28} height={28} style={{ borderRadius: 6, display: 'block', flexShrink: 0 }}
+      <header className="argus-top-app-bar">
+        <div className="argus-top-app-bar__start">
+          <img src="/argus_logo.svg" alt="Argus" width={28} height={28} className="argus-top-app-bar__logo"
             onError={(e) => { const el = e.target as HTMLImageElement; if (!el.dataset.fallback) { el.dataset.fallback = '1'; el.src = '/favicon.svg'; } }} />
-          <span style={{ fontWeight: 600, fontSize: 14, letterSpacing: 2, color: 'var(--text)' }}>ARGUS</span>
+          <span className="argus-top-app-bar__brand">ARGUS</span>
           {activeCase && (
-            <span style={{ marginLeft: 4, fontSize: 12, color: 'var(--text-muted)', background: 'var(--hover)', padding: '3px 10px', borderRadius: appearance.borderRadius, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeCase.name}</span>
+            <span className="argus-top-app-bar__case">{activeCase.name}</span>
           )}
         </div>
-        <div style={{ flex: 1, maxWidth: device.class === 'laptop' ? 280 : 360, margin: '0 16px', minWidth: 120 }}>
-          <input value={graphSearchQuery} onChange={(e) => setGraphSearchQuery(e.target.value)} placeholder={t('graph_search_placeholder')}
-            style={{ width: '100%', padding: '7px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: appearance.borderRadius, color: 'var(--text)', fontSize: 13, outline: 'none' }} />
+        <div className="argus-top-app-bar__search" style={{ maxWidth: device.class === 'laptop' ? 280 : 360 }}>
+          <input
+            value={graphSearchQuery}
+            onChange={(e) => setGraphSearchQuery(e.target.value)}
+            placeholder={t('graph_search_placeholder')}
+            className="argus-top-app-bar__search-input"
+          />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+        <div className="argus-top-app-bar__actions">
           <ToolbarBtn active={panels.search} onClick={() => togglePanel('search')} icon={<Search size={15} />} label={showToolbarLabel ? t('search') : ''} title={t('search')} />
           <ToolbarBtn active={panels.timeline} onClick={() => togglePanel('timeline')} icon={<Clock size={15} />} label={showToolbarLabel ? t('timeline') : ''} title={t('timeline')} />
           <ToolbarBtn active={panels.map} onClick={() => togglePanel('map')} icon={<Map size={15} />} label={showToolbarLabel ? t('map') : ''} title={t('map')} />
@@ -90,23 +95,25 @@ export default function App() {
           <ToolbarBtn active={panels.correlation} onClick={() => togglePanel('correlation')} icon={<GitCompare size={15} />} label={showToolbarLabel ? t('correlate') : ''} title={t('correlate')} />
           <ToolbarBtn active={panels.ai} onClick={() => togglePanel('ai')} icon={<Bot size={15} />} label={showToolbarLabel ? 'AI' : ''} title="AI" />
           <ToolbarBtn active={panels.settings} onClick={() => togglePanel('settings')} icon={<Settings size={15} />} label={showToolbarLabel ? t('settings') : ''} title={t('settings')} />
-          <button type="button" className="btn btn-ghost" onClick={() => undo()} title="Undo" style={{ padding: 6 }}><Undo2 size={15} /></button>
-          <button type="button" className="btn btn-ghost" onClick={() => redo()} title="Redo" style={{ padding: 6 }}><Redo2 size={15} /></button>
-          <button type="button" className="btn btn-ghost" onClick={() => { const blob = new Blob([exportGraph('json')], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'argus-export.json'; a.click(); }} title="Export" style={{ padding: 6 }}><Download size={15} /></button>
-          <button type="button" className="btn btn-ghost" onClick={() => setShowWelcome(true)} style={{ marginLeft: 4, fontSize: 11 }}>{t('home')}</button>
+          <button type="button" className="btn btn-ghost btn-icon" onClick={() => undo()} title="Undo"><Undo2 size={15} /></button>
+          <button type="button" className="btn btn-ghost btn-icon" onClick={() => redo()} title="Redo"><Redo2 size={15} /></button>
+          <button type="button" className="btn btn-ghost btn-icon" onClick={() => { const blob = new Blob([exportGraph('json')], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'argus-export.json'; a.click(); }} title="Export"><Download size={15} /></button>
+          <button type="button" className="btn btn-ghost" onClick={() => setShowWelcome(true)} style={{ fontSize: 11 }}>{t('home')}</button>
           <button type="button" className="btn btn-ghost" onClick={() => setCommandPaletteOpen(true)} style={{ fontSize: 11 }}>Ctrl+K</button>
         </div>
       </header>
 
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
-        {panels.sidebar && device.class !== 'phone' && (
-          <div className="argus-panel-shell anim-slide-left"><Sidebar /></div>
+      <div className="argus-body">
+        {showSidebarChrome && (
+          <div className={`argus-panel-shell argus-sidebar-shell${panels.sidebar ? ' is-expanded' : ' is-rail'}`}>
+            <Sidebar />
+          </div>
         )}
         {panels.search && (
           <div className="anim-slide-left argus-overlay-panel" style={{ height: '100%' }}><SearchPanel /></div>
         )}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, minHeight: 0 }}>
-          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+        <div className="argus-main">
+          <div className="argus-main__canvas">
             {graphSettings.enable3d ? <Graph3D /> : <GraphCanvas />}
             {!graphSettings.enable3d && <CanvasOverlay />}
             {panels.map && (
@@ -143,14 +150,14 @@ export default function App() {
         )}
       </div>
 
-      <div style={{ height: 'var(--footer-h)', flexShrink: 0, borderTop: '1px solid var(--border)', background: 'var(--header-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 10, color: 'var(--text-muted)' }}>
+      <footer className="argus-footer">
         <span>ARGUS · sellmetadone</span><span>·</span>
-        <a href="https://t.me/sofia_white_death" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>@sofia_white_death</a>
+        <a href="https://t.me/sofia_white_death" target="_blank" rel="noreferrer">@sofia_white_death</a>
         <span>·</span>
-        <a href="https://t.me/argus_platform" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>t.me/argus_platform</a>
+        <a href="https://t.me/argus_platform" target="_blank" rel="noreferrer">t.me/argus_platform</a>
         <span>·</span>
         <span title="Device profile">{device.class}/{device.density}</span>
-      </div>
+      </footer>
       <CommandPalette />
     </div>
   );
