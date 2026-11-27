@@ -8,7 +8,7 @@ export default function SettingsPanel() {
   const t = useT();
   const { setPanel, appearance, setAppearance, graphSettings, setGraphSettings, shodanApiKey, setShodanApiKey } =
     useStore();
-  const density = ((appearance as { density?: string }).density ?? 'auto') as string;
+  const density = appearance.density ?? 'auto';
 
   return (
     <div className="settings-panel argus-side-panel md-sheet-enter">
@@ -33,7 +33,7 @@ export default function SettingsPanel() {
         <Section title="Density">
           <div className="md-segmented md-segmented--wrap" role="group" aria-label="Density">
             {([['auto', 'Auto'], ['compact', 'Compact'], ['comfortable', 'Comfort'], ['spacious', 'Spacious']] as const).map(([val, label]) => (
-              <button key={val} type="button" className={`md-segmented__btn ${density === val ? 'is-selected' : ''}`} onClick={() => (setAppearance as (p: Record<string, unknown>) => void)({ density: val })}>
+              <button key={val} type="button" className={`md-segmented__btn ${density === val ? 'is-selected' : ''}`} onClick={() => setAppearance({ density: val })}>
                 {label}
               </button>
             ))}
