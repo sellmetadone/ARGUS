@@ -1,0 +1,248 @@
+/* ==========================================================================
+   ARGUS adaptive breakpoints
+   phone ≤719 | tablet 720–1023 | laptop 1024–1439 | desktop 1440–1919 | uw ≥1920
+   Also driven by data-device from deviceProfile (JS).
+   ========================================================================== */
+
+:root {
+  --bp-phone: 719px;
+  --bp-tablet: 720px;
+  --bp-laptop: 1024px;
+  --bp-desktop: 1440px;
+  --bp-ultrawide: 1920px;
+}
+
+/* ---------- Phone (≤719) ---------- */
+@media (max-width: 719px) {
+  :root {
+    --sidebar-w: 100%;
+    --inspector-w: 100%;
+    --topbar-h: 52px;
+    --footer-h: 22px;
+  }
+
+  .argus-top-app-bar {
+    padding: 0 8px;
+    gap: 8px;
+  }
+  .argus-top-app-bar__brand {
+    display: none;
+  }
+  .argus-top-app-bar__case {
+    display: none;
+  }
+  .argus-top-app-bar__search {
+    max-width: none !important;
+    flex: 1;
+    min-width: 0;
+  }
+  .argus-top-app-bar__search-input {
+    height: 36px;
+    font-size: 13px;
+  }
+  .argus-top-app-bar__actions .btn span {
+    display: none;
+  }
+  .argus-top-app-bar__actions {
+    gap: 0;
+  }
+
+  .argus-sidebar--expanded {
+    position: fixed;
+    left: 0;
+    top: var(--topbar-h);
+    bottom: var(--footer-h);
+    width: min(100vw, 320px);
+    z-index: 40;
+    box-shadow: var(--md-sys-elevation-3, 0 8px 24px rgba(0, 0, 0, 0.2));
+  }
+  .argus-sidebar--rail {
+    display: none;
+  }
+
+  .argus-panel-shell {
+    position: fixed;
+    inset: var(--topbar-h) 0 var(--footer-h) 0;
+    width: 100% !important;
+    max-width: none;
+    z-index: 35;
+    border-left: none;
+  }
+
+  .argus-overlay-panel > * {
+    width: 100%;
+    max-width: none;
+  }
+
+  .argus-footer {
+    font-size: 10px;
+    gap: 4px;
+    padding: 0 8px;
+    overflow: hidden;
+  }
+  .argus-footer a:nth-of-type(2) {
+    display: none;
+  }
+
+  .welcome-card {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 16px;
+    margin: 8px;
+  }
+
+  .conn-editor {
+    width: 100%;
+  }
+
+  .react-flow__minimap {
+    display: none !important;
+  }
+  .react-flow__controls {
+    transform: scale(0.9);
+    transform-origin: bottom left;
+  }
+}
+
+/* ---------- Tablet (720–1023) ---------- */
+@media (min-width: 720px) and (max-width: 1023px) {
+  :root {
+    --sidebar-w: 220px;
+    --inspector-w: 300px;
+  }
+
+  .argus-top-app-bar__brand {
+    letter-spacing: 0.08em;
+  }
+  .argus-top-app-bar__case {
+    max-width: 100px;
+  }
+  .argus-top-app-bar__actions .btn span {
+    display: none;
+  }
+
+  .argus-sidebar--expanded {
+    width: var(--sidebar-w);
+  }
+
+  .argus-panel-shell {
+    width: var(--inspector-w);
+    max-width: 40vw;
+  }
+
+  .argus-overlay-panel > * {
+    width: min(400px, 90vw);
+  }
+}
+
+/* ---------- Laptop (1024–1439) ---------- */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  :root {
+    --sidebar-w: 260px;
+    --inspector-w: 320px;
+  }
+
+  .argus-top-app-bar__search {
+    max-width: 280px;
+  }
+
+  @media (max-width: 1279px) {
+    .argus-top-app-bar__actions .btn span {
+      display: none;
+    }
+  }
+}
+
+/* ---------- Desktop (1440–1919) ---------- */
+@media (min-width: 1440px) and (max-width: 1919px) {
+  :root {
+    --sidebar-w: 280px;
+    --inspector-w: 360px;
+  }
+
+  .argus-top-app-bar__search {
+    max-width: 360px;
+  }
+}
+
+/* ---------- Ultrawide (≥1920) ---------- */
+@media (min-width: 1920px) {
+  :root {
+    --sidebar-w: 300px;
+    --inspector-w: 400px;
+  }
+
+  .argus-top-app-bar {
+    padding-left: 20px;
+    padding-right: 16px;
+  }
+  .argus-top-app-bar__search {
+    max-width: 480px;
+  }
+}
+
+/* ---------- Short height ---------- */
+@media (max-height: 899px) {
+  .argus-top-app-bar {
+    min-height: 48px;
+  }
+  .canvas-toolbar,
+  .whiteboard-bar {
+    min-height: 40px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  .argus-footer {
+    min-height: 22px;
+  }
+}
+
+/* ---------- data-device hooks ---------- */
+[data-device='phone'] .argus-top-app-bar__brand,
+[data-device='phone'] .argus-top-app-bar__case {
+  display: none;
+}
+[data-device='phone'] .react-flow__minimap {
+  display: none !important;
+}
+
+[data-device='tablet'] .argus-top-app-bar__actions .btn span {
+  display: none;
+}
+
+[data-device='laptop'] .argus-top-app-bar__search {
+  max-width: 280px;
+}
+
+[data-device='ultrawide'] .argus-top-app-bar__search {
+  max-width: 480px;
+}
+
+/* ---------- Coarse pointer (touch) ---------- */
+@media (pointer: coarse) {
+  .btn,
+  .btn-icon {
+    min-height: max(var(--control-h, 36px), 44px);
+    min-width: max(var(--control-h, 36px), 44px);
+  }
+  .sidebar-case {
+    padding: 12px;
+  }
+  .md-segmented__btn {
+    min-height: 40px;
+  }
+}
+
+/* ---------- Safe areas (notches) ---------- */
+@supports (padding: env(safe-area-inset-left)) {
+  .argus-shell {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  .argus-top-app-bar {
+    padding-top: env(safe-area-inset-top);
+  }
+  .argus-footer {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
