@@ -7,7 +7,7 @@ import { detectAndValidate } from '../../services/validation';
 import type { EntityType } from '../../types';
 
 export default function SearchPanel() {
-  const { setPanel, activeCaseId, addEntity, appearance } = useStore();
+  const { setPanel, activeCaseId, addEntity } = useStore();
   const [q, setQ] = useState('');
   const [hits, setHits] = useState<LookupHit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,145 +46,85 @@ export default function SearchPanel() {
   const tools = toolsForQuery(q.trim() || 'example.com');
 
   return (
-    <div
-      style={{
-        width: 360,
-        background: '#0f172a',
-        borderRight: '1px solid #1e293b',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <div style={{ padding: '14px 16px', borderBottom: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', letterSpacing: 1 }}>SEARCH</span>
-        <button onClick={() => setPanel('search', false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
-          <X size={16} />
+    <div className="search-panel argus-side-panel md-sheet-enter">
+      <header className="argus-side-panel__header">
+        <span className="argus-side-panel__title md-label-medium">Search</span>
+        <button type="button" className="btn btn-ghost btn-icon" onClick={() => setPanel('search', false)} aria-label="Close">
+          <X size={18} />
         </button>
-      </div>
+      </header>
 
-      <div style={{ padding: 12, display: 'flex', gap: 8 }}>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && run()}
-          placeholder="domain / IP / email / phone"
-          style={{
-            flex: 1,
-            padding: '8px 10px',
-            background: '#1e293b',
-            border: '1px solid #334155',
-            borderRadius: 6,
-            color: '#e2e8f0',
-            fontSize: 13,
-            outline: 'none',
-          }}
-        />
-        <button
-          onClick={run}
-          disabled={loading}
-          style={{
-            padding: '8px 12px',
-            background: appearance.accentColor,
-            border: 'none',
-            borderRadius: 6,
-            color: '#fff',
-            cursor: 'pointer',
-          }}
-        >
-          <SearchIcon size={16} />
-        </button>
-      </div>
-
-      {validation && (
-        <div style={{ padding: '0 12px 8px', fontSize: 11, color: validation.ok ? '#86efac' : '#fca5a5' }}>
-          {validation.kind}: {validation.ok ? 'valid' : validation.errors.join(', ')}
-          {validation.warnings.length ? ` · warn: ${validation.warnings.join(', ')}` : ''}
+      <div className="search-query-bar md-stagger-item">
+        <div className="md-search-field">
+          <SearchIcon size={16} className="md-search-field__icon" aria-hidden />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && run()}
+            placeholder="domain / IP / email / phone"
+            className="md-search-field__input"
+            aria-label="OSINT query"
+          />
         </div>
-      )}
+        <button type="button" className="btn btn-filled" onClick={run} disabled={loading || !q.trim()}>
+          {loading ? '…' : 'Go'}
+        </button>
+      </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-        {loading && <div style={{ color: '#64748b', fontSize: 12 }}>Searching…</div>}
-        {hits.map((h) => (
-          <div
-            key={h.id}
-            style={{
-              padding: 10,
-              marginBottom: 8,
-              background: '#1e293b',
-              borderRadius: 8,
-              border: '1px solid #334155',
-            }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{h.title}</div>
-            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{h.snippet}</div>
-            <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>
-              {h.source} · {h.type} · conf {h.confidence}
-            </div>
-            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-              {h.addable && (
-                <button
-                  onClick={() => addHit(h)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '4px 8px',
-                    background: '#1e1b4b',
-                    border: '1px solid #4c1d95',
-                    borderRadius: 4,
-                    color: '#c4b5fd',
-                    fontSize: 11,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Plus size={12} /> Add to graph
-                </button>
-              )}
-              {h.url && (
-                <a
-                  href={h.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '4px 8px',
-                    background: '#0f172a',
-                    border: '1px solid #334155',
-                    borderRadius: 4,
-                    color: '#94a3b8',
-                    fontSize: 11,
-                    textDecoration: 'none',
-                  }}
-                >
-                  <ExternalLink size={12} /> Open
-                </a>
-              )}
-            </div>
+      <div className="argus-side-panel__body md-stagger">
+        {validation && (
+          <div className={`md-banner ${validation.ok ? 'md-banner--ok' : 'md-banner--warn'} md-stagger-item`}>
+            <strong>{validation.kind || 'query'}</strong>
+            <span>{validation.ok ? 'Looks valid' : validation.message || 'Check format'}</span>
           </div>
-        ))}
+        )}
 
-        <div style={{ marginTop: 16, fontSize: 11, fontWeight: 600, color: '#64748b', letterSpacing: 1 }}>OSINT LINKS</div>
-        {tools.slice(0, 8).map((t) => (
-          <a
-            key={t.id}
-            href={t.url}
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              display: 'block',
-              padding: '8px 0',
-              color: '#94a3b8',
-              fontSize: 12,
-              textDecoration: 'none',
-              borderBottom: '1px solid #1e293b',
-            }}
-          >
-            {t.name} — {t.description}
-          </a>
-        ))}
+        {tools.length > 0 && (
+          <section className="md-section md-stagger-item">
+            <h3 className="md-section__title">Tools</h3>
+            <div className="md-chip-row">
+              {tools.slice(0, 12).map((tool) => (
+                <a key={tool.name} href={tool.url} target="_blank" rel="noreferrer" className="md-chip">
+                  {tool.name}
+                  <ExternalLink size={12} />
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="md-section md-stagger-item">
+          <h3 className="md-section__title">Results {hits.length ? `(${hits.length})` : ''}</h3>
+          {loading && <div className="md-muted">Searching…</div>}
+          {!loading && hits.length === 0 && <div className="md-muted">No hits yet — run a query</div>}
+          <ul className="md-result-list">
+            {hits.map((h, i) => (
+              <li key={`${h.title}-${i}`} className="md-result-card">
+                <div className="md-result-card__main">
+                  <div className="md-result-card__title">{h.title}</div>
+                  <div className="md-result-card__meta">
+                    {h.source}
+                    {h.type ? ` · ${h.type}` : ''}
+                    {typeof h.confidence === 'number' ? ` · ${h.confidence}%` : ''}
+                  </div>
+                  {h.snippet ? <div className="md-result-card__snippet">{h.snippet}</div> : null}
+                </div>
+                <div className="md-result-card__actions">
+                  {h.url ? (
+                    <a className="btn btn-ghost btn-icon" href={h.url} target="_blank" rel="noreferrer" title="Open">
+                      <ExternalLink size={16} />
+                    </a>
+                  ) : null}
+                  {h.addable ? (
+                    <button type="button" className="btn btn-ghost btn-icon" title="Add to graph" onClick={() => addHit(h)} disabled={!activeCaseId}>
+                      <Plus size={16} />
+                    </button>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
     </div>
   );
