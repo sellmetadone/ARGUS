@@ -128,76 +128,57 @@ export default function Timeline() {
   if (!activeCaseId) return null;
 
   return (
-    <div
-      className="argus-timeline"
-      style={{
-        height: 196,
-        background: 'var(--panel)',
-        borderTop: '1px solid var(--border)',
-        padding: '10px 16px',
-        overflowX: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-        color: 'var(--text)',
-        gap: 6,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1 }}>
-          {t('timeline').toUpperCase()}
-        </span>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer' }}>
+    <div className="argus-timeline md-timeline">
+      <div className="md-timeline__toolbar">
+        <span className="md-timeline__title md-label-medium">{t('timeline')}</span>
+        <label className="md-timeline__check">
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-          {t('temporal_filter_graph') || 'Filter graph'}
+          <span>{t('temporal_filter') || 'Filter graph'}</span>
         </label>
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={dateInp} title={t('temporal_from')} />
-        <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>–</span>
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={dateInp} title={t('temporal_to')} />
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer' }}>
+        <label className="md-timeline__check">
           <input type="checkbox" checked={keepUndated} onChange={(e) => setKeepUndated(e.target.checked)} />
-          {t('temporal_keep_undated')}
+          <span>{t('keep_undated') || 'Keep undated'}</span>
         </label>
-        <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: '2px 8px' }} onClick={clear}>
+        <input
+          className="md-select md-timeline__date"
+          type="date"
+          value={from || ''}
+          onChange={(e) => setFrom(e.target.value || null)}
+          aria-label="From"
+        />
+        <span className="md-muted">→</span>
+        <input
+          className="md-select md-timeline__date"
+          type="date"
+          value={to || ''}
+          onChange={(e) => setTo(e.target.value || null)}
+          aria-label="To"
+        />
+        <button type="button" className="btn btn-ghost" onClick={() => clear()}>
           {t('clear') || 'Clear'}
         </button>
-        {enabled && (from || to) && (
-          <span style={{ fontSize: 10, color: 'var(--accent)' }}>
-            {t('temporal_active') || 'Active'} · {graphSlice.count}/{caseEntities.length} nodes
-          </span>
-        )}
-        {overlaps.length > 0 && (
-          <span style={{ fontSize: 10, color: '#fbbf24' }}>
-            {overlaps.length} {t('temporal_overlaps') || 'overlaps'}
-          </span>
-        )}
-      </div>
-
-      {bounds && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, maxWidth: 720 }}>
-          <span style={{ fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-            {format(bounds.min, 'yyyy-MM-dd')}
-          </span>
+        {bounds && (
           <input
+            className="md-timeline__scrub"
             type="range"
             min={0}
             max={100}
             value={scrubValue}
             onChange={(e) => onScrub(Number(e.target.value))}
-            style={{ flex: 1, accentColor: 'var(--accent)' }}
-            title={t('temporal_scrubber') || 'Scrub timeline → filter graph'}
             aria-label="Timeline scrubber"
-            data-testid="timeline-scrubber"
           />
-          <span style={{ fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-            {to || format(bounds.max, 'yyyy-MM-dd')}
-          </span>
-        </div>
-      )}
+        )}
+        <span className="md-timeline__meta md-muted">
+          {events.length} evt
+          {enabled && (from || to) ? ` · graph ${graphSlice.count}` : ''}
+          {overlaps.length ? ` · ${overlaps.length} overlaps` : ''}
+        </span>
+      </div>
 
-      <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start', position: 'relative', minWidth: 'max-content', flex: 1 }}>
-        <div style={{ position: 'absolute', top: 14, left: 0, right: 0, height: 2, background: 'var(--border)', zIndex: 0 }} />
+      <div className="md-timeline__track">
+        <div className="md-timeline__line" aria-hidden />
         {events.length === 0 && (
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t('temporal_no_events') || 'No events'}</div>
+          <div className="md-muted">{t('temporal_no_events') || 'No events'}</div>
         )}
         {events.map((ev) => {
           const selected = selectedTimelineEventId === ev.id;
@@ -206,29 +187,12 @@ export default function Timeline() {
             <div
               key={ev.id}
               data-testid="timeline-event"
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                minWidth: 140,
-                position: 'relative',
-                zIndex: 1,
-                cursor: 'pointer',
-              }}
+              className={`md-timeline__event ${selected ? 'is-selected' : ''} ${linked ? 'is-linked' : ''}`}
               onClick={() => focusEventOnGraph(ev)}
               title={ev.entityId ? `→ graph ${ev.entityId}` : undefined}
             >
-              <div
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: '50%',
-                  background: selected || linked ? 'var(--accent)' : 'var(--border)',
-                  border: selected ? '2px solid var(--text)' : '2px solid var(--panel)',
-                  marginBottom: 6,
-                }}
-              />
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 2 }}>
+              <div className="md-timeline__dot" />
+              <div className="md-timeline__date">
                 {(() => {
                   try {
                     return format(Date.parse(ev.timestamp), 'yyyy-MM-dd');
@@ -237,20 +201,7 @@ export default function Timeline() {
                   }
                 })()}
               </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  maxWidth: 130,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  textAlign: 'center',
-                  color: linked ? 'var(--accent)' : 'var(--text)',
-                }}
-              >
-                {ev.title || ev.id}
-              </div>
+              <div className="md-timeline__event-title">{ev.title || ev.id}</div>
             </div>
           );
         })}
@@ -258,12 +209,3 @@ export default function Timeline() {
     </div>
   );
 }
-
-const dateInp: React.CSSProperties = {
-  background: 'var(--bg)',
-  border: '1px solid var(--border)',
-  color: 'var(--text)',
-  borderRadius: 4,
-  fontSize: 11,
-  padding: '2px 6px',
-};
