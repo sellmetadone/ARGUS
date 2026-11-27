@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, type CSSProperties } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { X, Trash2, Pin, Link2, Map as MapIcon } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { ENTITY_COLORS, RELATIONSHIP_LABELS } from '../../types';
@@ -17,7 +17,6 @@ function hasGeo(props: Record<string, unknown> | undefined): boolean {
   return typeof raw === 'string' && raw.includes(',');
 }
 
-/** pinnedNodeIds is string[] in the store (not Set). */
 function isPinnedId(pinned: unknown, id: string): boolean {
   if (!pinned) return false;
   if (Array.isArray(pinned)) return pinned.includes(id);
@@ -47,13 +46,9 @@ export default function ObjectInspector() {
   const [tab, setTab] = useState<Tab>('data');
   const entity = entities.find((e) => e.id === selectedEntityId) ?? null;
   const rel = relationships.find((r) => r.id === selectedRelationshipId) ?? null;
-
   const entityId = entity?.id;
   const related = useMemo(
-    () =>
-      entityId
-        ? relationships.filter((r) => r.sourceId === entityId || r.targetId === entityId)
-        : [],
+    () => (entityId ? relationships.filter((r) => r.sourceId === entityId || r.targetId === entityId) : []),
     [relationships, entityId]
   );
 
@@ -63,8 +58,10 @@ export default function ObjectInspector() {
 
   if (!entity && !rel) {
     return (
-      <div className="flex flex-col h-full items-center justify-center text-sm text-[var(--text-muted)] p-4">
-        {t('inspector_empty') || 'Select an entity or connection'}
+      <div className="object-inspector argus-side-panel">
+        <div className="argus-side-panel__empty md-muted">
+          {t('inspector_empty') || 'Select an entity or connection'}
+        </div>
       </div>
     );
   }
@@ -82,107 +79,111 @@ export default function ObjectInspector() {
   const color = entity ? ENTITY_COLORS[entity.type] || '#64748b' : '#64748b';
 
   return (
-    <div className="object-inspector flex flex-col h-full bg-[var(--bg-panel)] border-l border-[var(--border)]">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border)] shrink-0">
-        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
-        <span className="text-sm font-medium truncate flex-1">
+    <div className="object-inspector argus-side-panel md-sheet-enter">
+      <header className="argus-side-panel__header">
+        <span className="oi-dot" style={{ background: color }} aria-hidden />
+        <span className="argus-side-panel__title md-label-medium">
           {entity ? entity.label || entity.type : rel ? RELATIONSHIP_LABELS[rel.type] || rel.type : ''}
         </span>
         {entity && (
-          <button
-            type="button"
-            className="p-1 rounded hover:bg-[var(--bg-hover)]"
-            title={isPinned ? 'Unpin' : 'Pin'}
-            onClick={() => togglePinNode(entity.id)}
-          >
-            <Pin size={14} className={isPinned ? 'text-[var(--accent)]' : ''} />
+          <button type="button" className={`btn btn-ghost btn-icon ${isPinned ? 'is-active' : ''}`} title={isPinned ? 'Unpin' : 'Pin'} onClick={() => togglePinNode(entity.id)}>
+            <Pin size={16} />
           </button>
         )}
-        <button type="button" className="p-1 rounded hover:bg-[var(--bg-hover)] text-red-400" title="Delete" onClick={onDelete}>
-          <Trash2 size={14} />
+        <button type="button" className="btn btn-ghost btn-icon btn-danger" title="Delete" onClick={onDelete}>
+          <Trash2 size={16} />
         </button>
-        <button type="button" className="p-1 rounded hover:bg-[var(--bg-hover)]" onClick={() => setPanel(null)}>
-          <X size={14} />
+        <button type="button" className="btn btn-ghost btn-icon" onClick={() => setPanel(null)} aria-label="Close">
+          <X size={16} />
         </button>
-      </div>
+      </header>
 
       {entity && (
         <>
-          <div className="flex border-b border-[var(--border)] text-xs shrink-0">
+          <nav className="md-tabs" role="tablist" aria-label="Inspector tabs">
             {(['overview', 'data', 'sources', 'relations', 'history'] as Tab[]).map((tb) => (
-              <button
-                key={tb}
-                type="button"
-                className={`px-2.5 py-1.5 capitalize ${
-                  tab === tb ? 'border-b-2 border-[var(--accent)] text-[var(--accent)]' : 'text-[var(--text-muted)]'
-                }`}
-                onClick={() => setTab(tb)}
-              >
+              <button key={tb} type="button" role="tab" aria-selected={tab === tb} className={`md-tabs__tab ${tab === tb ? 'is-selected' : ''}`} onClick={() => setTab(tb)}>
                 {t(`inspector_tab_${tb}`) || tb}
               </button>
             ))}
-          </div>
-          <div className="flex-1 overflow-auto p-3 text-sm">
+          </nav>
+
+          <div className="argus-side-panel__body md-stagger">
             {tab === 'overview' && (
-              <div className="space-y-2">
-                <div>
-                  <span className="text-[var(--text-muted)]">Type:</span> {entity.type}
+              <section className="md-section md-stagger-item">
+                <h3 className="md-section__title">Overview</h3>
+                <div className="md-section__body">
+                  <div className="oi-kv"><span className="oi-kv__k">Type</span><span className="oi-kv__v">{entity.type}</span></div>
+                  <div className="oi-kv"><span className="oi-kv__k">ID</span><code className="oi-kv__v oi-code">{entity.id}</code></div>
+                  {hasGeo(entity.properties) && (
+                    <button type="button" className="btn btn-outlined" onClick={() => setPanel('map')}>
+                      <MapIcon size={14} /> Show on map
+                    </button>
+                  )}
                 </div>
-                <div>
-                  <span className="text-[var(--text-muted)]">ID:</span>{' '}
-                  <code className="text-xs">{entity.id}</code>
-                </div>
-                {hasGeo(entity.properties) && (
-                  <button
-                    type="button"
-                    className="flex items-center gap-1 text-[var(--accent)]"
-                    onClick={() => setPanel('map')}
-                  >
-                    <MapIcon size={14} /> Show on map
-                  </button>
-                )}
-              </div>
+              </section>
             )}
-            {tab === 'data' && <EntityDataForm entity={entity} updateEntity={updateEntity} />}
+
+            {tab === 'data' && (
+              <section className="md-section md-stagger-item">
+                <h3 className="md-section__title">Data</h3>
+                <div className="md-section__body">
+                  <EntityDataForm entity={entity} updateEntity={updateEntity} />
+                </div>
+              </section>
+            )}
+
             {tab === 'sources' && (
-              <div className="text-[var(--text-muted)] text-xs">
-                {t('inspector_sources_empty') || 'No sources attached'}
-              </div>
+              <section className="md-section md-stagger-item">
+                <h3 className="md-section__title">Sources</h3>
+                <p className="md-muted">{t('inspector_sources_empty') || 'No sources attached'}</p>
+              </section>
             )}
+
             {tab === 'relations' && (
-              <div className="space-y-1">
-                {related.length === 0 && <div className="text-[var(--text-muted)] text-xs">No links</div>}
-                {related.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    className="w-full text-left px-2 py-1 rounded hover:bg-[var(--bg-hover)] flex items-center gap-2"
-                    onClick={() => setSelectedRelationship(r.id)}
-                  >
-                    <Link2 size={12} />
-                    <span className="truncate">{RELATIONSHIP_LABELS[r.type] || r.type}</span>
-                  </button>
-                ))}
-              </div>
+              <section className="md-section md-stagger-item">
+                <h3 className="md-section__title">Relations</h3>
+                <div className="md-section__body">
+                  {related.length === 0 && <p className="md-muted">No links</p>}
+                  <ul className="oi-rel-list">
+                    {related.map((r) => (
+                      <li key={r.id}>
+                        <button type="button" className="oi-rel-item" onClick={() => setSelectedRelationship(r.id)}>
+                          <Link2 size={14} />
+                          <span className="truncate">{RELATIONSHIP_LABELS[r.type] || r.type}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
             )}
+
             {tab === 'history' && (
-              <div className="text-xs text-[var(--text-muted)]">
-                {(history || [])
-                  .filter((h: { entityId?: string }) => h.entityId === entity.id)
-                  .slice(-20)
-                  .map((h: { action?: string; type?: string; ts?: string }, i: number) => (
-                    <div key={i} className="py-0.5">
-                      {h.action || h.type} — {h.ts || ''}
-                    </div>
-                  )) || 'No history'}
-              </div>
+              <section className="md-section md-stagger-item">
+                <h3 className="md-section__title">History</h3>
+                <div className="oi-history">
+                  {(history || [])
+                    .filter((h: { entityId?: string }) => h.entityId === entity.id)
+                    .slice(-20)
+                    .map((h: { action?: string; type?: string; ts?: string }, i: number) => (
+                      <div key={i} className="oi-history__row">
+                        <span>{h.action || h.type}</span>
+                        <span className="md-muted">{h.ts || ''}</span>
+                      </div>
+                    ))}
+                  {(history || []).filter((h: { entityId?: string }) => h.entityId === entity.id).length === 0 && (
+                    <p className="md-muted">No history</p>
+                  )}
+                </div>
+              </section>
             )}
           </div>
         </>
       )}
 
       {rel && !entity && (
-        <div className="flex-1 overflow-auto p-3">
+        <div className="argus-side-panel__body">
           <ConnectionEditor relationshipId={rel.id} />
         </div>
       )}
@@ -199,40 +200,22 @@ function EntityDataForm({
 }) {
   const schema = getSchema(entity.type);
   const props = entity.properties || {};
-
   const onChange = (key: string, value: unknown) => {
     updateEntity(entity.id, {
       properties: { ...props, [key]: value },
       label: key === 'name' || key === 'title' ? String(value) : entity.label,
     });
   };
-
   return (
-    <div className="space-y-2">
-      <label className="block text-xs text-[var(--text-muted)]">Label</label>
-      <input
-        className="w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--bg)]"
-        style={inputStyle}
-        value={entity.label || ''}
-        onChange={(e) => updateEntity(entity.id, { label: e.target.value })}
-      />
+    <div className="oi-form">
+      <label className="md-field-label" htmlFor="oi-label">Label</label>
+      <input id="oi-label" className="md-select" value={entity.label || ''} onChange={(e) => updateEntity(entity.id, { label: e.target.value })} />
       {(schema?.fields || []).map((f: SchemaField) => (
         <div key={f.key}>
-          <label className="block text-xs text-[var(--text-muted)] mb-0.5">{f.label || f.key}</label>
-          <input
-            className="w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--bg)]"
-            style={inputStyle}
-            value={String(props[f.key] ?? '')}
-            onChange={(e) => onChange(f.key, e.target.value)}
-          />
+          <label className="md-field-label" htmlFor={`oi-${f.key}`}>{f.label || f.key}</label>
+          <input id={`oi-${f.key}`} className="md-select" value={String(props[f.key] ?? '')} onChange={(e) => onChange(f.key, e.target.value)} />
         </div>
       ))}
     </div>
   );
 }
-
-const inputStyle: CSSProperties = {
-  color: 'var(--text)',
-  fontSize: 12,
-  boxSizing: 'border-box',
-};
