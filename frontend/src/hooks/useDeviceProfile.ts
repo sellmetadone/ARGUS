@@ -4,17 +4,21 @@ import {
   detectDeviceProfile,
   type DeviceProfile,
 } from '../core/deviceProfile';
+import { useStore } from '../store/useStore';
 
-/** Subscribe to viewport + media; apply desktop-first CSS tokens. */
+/** Subscribe to viewport + appearance.density; apply CSS tokens. */
 export function useDeviceProfile(): DeviceProfile {
-  const [profile, setProfile] = useState(() => detectDeviceProfile());
+  const densityPref = useStore((s) => s.appearance.density ?? 'auto');
+  const [profile, setProfile] = useState(() =>
+    detectDeviceProfile(undefined, undefined, densityPref)
+  );
 
   useEffect(() => {
     let raf = 0;
     const update = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        const next = detectDeviceProfile();
+        const next = detectDeviceProfile(undefined, undefined, densityPref);
         setProfile(next);
         applyDeviceProfileToDom(next);
       });
@@ -33,7 +37,7 @@ export function useDeviceProfile(): DeviceProfile {
       mqMotion.removeEventListener?.('change', update);
       mqPointer.removeEventListener?.('change', update);
     };
-  }, []);
+  }, [densityPref]);
 
   return profile;
 }
