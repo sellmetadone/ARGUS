@@ -7,6 +7,7 @@ import './styles/m3-sidebar.css'
 import './styles/m3-motion-forms.css'
 import './styles/m3-density.css'
 import './styles/m3-breakpoints.css'
+import './styles/m3-inspector-timeline.css'
 import App from './App.tsx'
 import { registerBuiltinModules } from './core/moduleRegistry'
 
