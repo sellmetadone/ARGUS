@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { Bot, X } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { loadAiConfig, saveAiConfig, checkOllama, buildCaseSummaryPrompt, generateLocal, type AiConfig, type AiProviderStatus } from '../../services/intelligence/aiService';
+import {
+  loadAiConfig,
+  saveAiConfig,
+  checkOllama,
+  buildCaseSummaryPrompt,
+  generateLocal,
+  type AiConfig,
+  type AiProviderStatus,
+} from '../../services/intelligence/aiService';
 import { computeMetrics } from '../../services/intelligence/graphIntelligence';
 import { useT } from '../../i18n/useT';
 
@@ -30,11 +38,13 @@ export default function AiAssistantPanel() {
       graphMetrics: `nodes=${m.nodeCount} edges=${m.edgeCount} density=${m.density}`,
     });
     setPreview(`SYSTEM:\n${p.system}\n\nUSER (${p.approxChars} chars):\n${p.user}`);
-    setConsent(false); setOutput('');
+    setConsent(false);
+    setOutput('');
   };
   const run = async () => {
     if (!consent || !activeCaseId) return;
-    setBusy(true); setOutput('');
+    setBusy(true);
+    setOutput('');
     const entities = getEntitiesForCase(activeCaseId);
     const relationships = getRelationshipsForCase(activeCaseId);
     const c = cases.find((x) => x.id === activeCaseId);
@@ -52,35 +62,45 @@ export default function AiAssistantPanel() {
   };
 
   return (
-    <div className="argus-panel" style={{ width: 360, background: 'var(--panel)', borderLeft: '1px solid var(--border)', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: 'var(--text)' }}>
-      <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span><Bot size={14} style={{ marginRight: 6, verticalAlign: -2 }} />{t('ai_title')}</span>
-        <button type="button" className="btn btn-ghost" style={{ padding: 4 }} onClick={() => setPanel('ai', false)}><X size={14} /></button>
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: 12, fontSize: 12, color: 'var(--text-muted)' }}>
-        <p style={{ marginBottom: 12 }}>{t('ai_intro')}</p>
-        <label style={row}><input type="checkbox" checked={cfg.enabled} onChange={(e) => update({ enabled: e.target.checked })} />{t('ai_enable')}</label>
-        <label style={{ display: 'block', marginTop: 8 }}>{t('ai_base')}<input value={cfg.baseUrl} onChange={(e) => update({ baseUrl: e.target.value })} style={inp} /></label>
-        <label style={{ display: 'block', marginTop: 8 }}>{t('ai_model')}<input value={cfg.model} onChange={(e) => update({ model: e.target.value })} style={inp} /></label>
-        <button type="button" className="btn btn-secondary" onClick={probe} style={{ marginTop: 8 }}>{t('ai_check')}</button>
+    <div className="argus-side-panel md-sheet-enter ai-panel">
+      <header className="argus-side-panel__header">
+        <span className="argus-side-panel__title md-label-medium">
+          <Bot size={16} style={{ marginRight: 8, verticalAlign: -3 }} />
+          {t('ai_title')}
+        </span>
+        <button type="button" className="btn btn-ghost btn-icon" onClick={() => setPanel('ai', false)} aria-label="Close">
+          <X size={18} />
+        </button>
+      </header>
+      <div className="argus-side-panel__body md-stagger">
+        <p className="md-muted md-stagger-item">{t('ai_intro')}</p>
+        <label className="md-switch-row md-stagger-item">
+          <span>{t('ai_enable')}</span>
+          <input type="checkbox" className="md-switch" checked={cfg.enabled} onChange={(e) => update({ enabled: e.target.checked })} />
+        </label>
+        <label className="md-field-label" htmlFor="ai-base">{t('ai_base')}</label>
+        <input id="ai-base" className="md-select" value={cfg.baseUrl} onChange={(e) => update({ baseUrl: e.target.value })} />
+        <label className="md-field-label" htmlFor="ai-model">{t('ai_model')}</label>
+        <input id="ai-model" className="md-select" value={cfg.model} onChange={(e) => update({ model: e.target.value })} />
+        <button type="button" className="btn btn-outlined" onClick={probe}>{t('ai_check')}</button>
         {status && (
-          <div style={{ marginTop: 8, fontSize: 11 }}>
+          <div className="md-muted" style={{ fontSize: 11 }}>
             {status.reachable
               ? `${t('ai_ok')}: ${status.models.join(', ') || '(none)'}`
               : `${t('ai_fail')}: ${status.error}`}
           </div>
         )}
-        <button type="button" className="btn btn-secondary" onClick={prepare} style={{ marginTop: 12 }} disabled={!activeCaseId}>{t('ai_preview')}</button>
-        {preview && <pre style={{ marginTop: 8, padding: 8, background: 'var(--bg)', borderRadius: 6, fontSize: 10, whiteSpace: 'pre-wrap', color: 'var(--text)', maxHeight: 160, overflow: 'auto' }}>{preview}</pre>}
-        <label style={{ ...row, marginTop: 10 }}><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />{t('ai_consent')}</label>
-        <button type="button" className="btn btn-primary" onClick={run} style={{ marginTop: 8 }} disabled={!cfg.enabled || !consent || busy}>
+        <button type="button" className="btn btn-outlined" onClick={prepare} disabled={!activeCaseId}>{t('ai_preview')}</button>
+        {preview && <pre className="md-stagger-item" style={{ padding: 8, background: 'var(--md-sys-color-surface-container-highest, var(--bg))', borderRadius: 8, fontSize: 10, whiteSpace: 'pre-wrap', maxHeight: 160, overflow: 'auto' }}>{preview}</pre>}
+        <label className="md-switch-row">
+          <span>{t('ai_consent')}</span>
+          <input type="checkbox" className="md-switch" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+        </label>
+        <button type="button" className="btn btn-filled" onClick={run} disabled={!cfg.enabled || !consent || busy}>
           {busy ? t('ai_busy') : t('ai_run')}
         </button>
-        {output && <pre style={{ marginTop: 12, padding: 8, background: 'var(--bg)', borderRadius: 6, fontSize: 11, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{output}</pre>}
+        {output && <pre style={{ padding: 8, background: 'var(--md-sys-color-surface-container-highest, var(--bg))', borderRadius: 8, fontSize: 11, whiteSpace: 'pre-wrap' }}>{output}</pre>}
       </div>
     </div>
   );
 }
-
-const row: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text)' };
-const inp: React.CSSProperties = { display: 'block', width: '100%', marginTop: 4, padding: '6px 8px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 12, boxSizing: 'border-box' };
