@@ -31,42 +31,71 @@ export default function EvidencePanel() {
   };
 
   return (
-    <div className="argus-panel" style={{ width: 340, background: 'var(--panel)', borderLeft: '1px solid var(--border)', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: 'var(--text)' }}>
-      <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span><FileText size={14} style={{ marginRight: 6, verticalAlign: -2 }} />{t('evidence')}</span>
-        <button type="button" className="btn btn-ghost" style={{ padding: 4 }} onClick={() => setPanel('evidence', false)}><X size={14} /></button>
-      </div>
-      <div style={{ padding: 12, borderBottom: '1px solid var(--border)', fontSize: 12 }}>
-        <div style={{ color: 'var(--text-muted)', marginBottom: 8 }}>{t('evidence_disclaimer')}</div>
-        <select value={kind} onChange={(e) => setKind(e.target.value as EvidenceKind)} style={inp}>
-          <option value="url">URL</option>
-          <option value="note">Note</option>
-          <option value="file">File</option>
-          <option value="quote">Quote</option>
-          <option value="other">Other</option>
-        </select>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('evidence_title')} style={{ ...inp, marginTop: 6 }} />
-        <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder={t('evidence_content')} rows={2} style={{ ...inp, marginTop: 6, resize: 'vertical' }} />
-        <button type="button" className="btn btn-primary" onClick={add} style={{ marginTop: 8 }} disabled={!activeCaseId}><Plus size={12} /> {t('evidence_add')}</button>
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-        {items.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t('evidence_empty')}</div>}
-        {items.map((item) => (
-          <div key={item.id} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, marginBottom: 10, fontSize: 12 }}>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>{item.title}</div>
-            <div style={{ color: 'var(--text-muted)', wordBreak: 'break-all' }}>{item.content}</div>
-            <div style={{ marginTop: 6, color: 'var(--text-muted)', fontSize: 11 }}>{assessmentNote(item)}</div>
-            <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {(['unverified', 'pending', 'corroborated', 'disputed', 'refuted'] as VerificationStatus[]).map((v) => (
-                <button key={v} type="button" onClick={() => { updateEvidence(item.id, { verification: v }, 'verification_change'); reload(); }} className={item.verification === v ? 'btn btn-primary' : 'btn btn-secondary'} style={{ fontSize: 10, padding: '2px 6px' }}>{v}</button>
-              ))}
-            </div>
-            <button type="button" className="btn btn-danger" onClick={() => { removeEvidence(item.id); reload(); }} style={{ marginTop: 8 }}><Trash2 size={12} /> {t('delete')}</button>
+    <div className="argus-side-panel md-sheet-enter evidence-panel">
+      <header className="argus-side-panel__header">
+        <span className="argus-side-panel__title md-label-medium">
+          <FileText size={16} style={{ marginRight: 8, verticalAlign: -3 }} />
+          {t('evidence')}
+        </span>
+        <button type="button" className="btn btn-ghost btn-icon" onClick={() => setPanel('evidence', false)} aria-label="Close">
+          <X size={18} />
+        </button>
+      </header>
+      <div className="argus-side-panel__body md-stagger">
+        <p className="md-muted md-stagger-item">{t('evidence_disclaimer')}</p>
+        <section className="md-section md-stagger-item">
+          <h3 className="md-section__title">{t('evidence_add') || 'Add evidence'}</h3>
+          <div className="md-section__body">
+            <select className="md-select" value={kind} onChange={(e) => setKind(e.target.value as EvidenceKind)}>
+              <option value="url">URL</option>
+              <option value="note">Note</option>
+              <option value="file">File</option>
+              <option value="quote">Quote</option>
+              <option value="other">Other</option>
+            </select>
+            <input className="md-select" placeholder={t('evidence_title') || 'Title'} value={title} onChange={(e) => setTitle(e.target.value)} />
+            <textarea className="md-select" rows={3} placeholder={t('evidence_content') || 'Content / URL'} value={content} onChange={(e) => setContent(e.target.value)} style={{ minHeight: 72, resize: 'vertical' }} />
+            <button type="button" className="btn btn-filled" onClick={add} disabled={!activeCaseId || !title.trim()}>
+              <Plus size={14} /> {t('add') || 'Add'}
+            </button>
           </div>
-        ))}
+        </section>
+        <section className="md-section md-stagger-item">
+          <h3 className="md-section__title">{t('evidence_list') || 'Items'} ({items.length})</h3>
+          <ul className="md-result-list">
+            {items.length === 0 && <li className="md-muted">{t('evidence_empty') || 'No evidence yet'}</li>}
+            {items.map((item) => (
+              <li key={item.id} className="md-result-card">
+                <div className="md-result-card__main">
+                  <div className="md-result-card__title">{item.title}</div>
+                  <div className="md-result-card__meta">{item.kind} · {item.verification}</div>
+                  {item.content ? <div className="md-result-card__snippet">{item.content.slice(0, 120)}</div> : null}
+                  <div className="md-chip-row" style={{ marginTop: 8 }}>
+                    {(['unverified', 'corroborated', 'disputed', 'rejected'] as VerificationStatus[]).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        className={`md-chip ${item.verification === v ? 'is-selected' : ''}`}
+                        onClick={() => { updateEvidence(item.id, { verification: v }); reload(); }}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="md-muted" style={{ marginTop: 6, marginBottom: 0, fontSize: 11 }}>
+                    {assessmentNote(item)}
+                  </p>
+                </div>
+                <div className="md-result-card__actions">
+                  <button type="button" className="btn btn-ghost btn-icon btn-danger" title="Delete" onClick={() => { removeEvidence(item.id); reload(); }}>
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
     </div>
   );
 }
-
-const inp: React.CSSProperties = { width: '100%', padding: '6px 8px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 12, boxSizing: 'border-box' };
