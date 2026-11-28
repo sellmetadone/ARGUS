@@ -1,0 +1,48 @@
+/* Remaining overlay panels — M3 shell alignment */
+.evidence-panel,
+.correlation-panel,
+.ai-panel,
+.analytics-panel,
+.tutorial-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  max-width: 400px;
+  background: var(--md-sys-color-surface-container, var(--panel));
+  border-left: 1px solid var(--md-sys-color-outline-variant, var(--border));
+  color: var(--md-sys-color-on-surface, var(--text));
+}
+
+.evidence-panel .md-chip.is-selected,
+.correlation-panel .md-chip.is-selected {
+  outline: 2px solid var(--md-sys-color-primary, var(--accent));
+  outline-offset: 1px;
+}
+
+.tutorial-panel .argus-side-panel__body {
+  font-size: 13px;
+  line-height: 1.45;
+}
+.tutorial-panel code {
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--md-sys-color-surface-container-highest, var(--bg));
+}
+
+.ai-panel pre,
+.analytics-panel .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@media (max-width: 719px) {
+  .evidence-panel,
+  .correlation-panel,
+  .ai-panel,
+  .analytics-panel,
+  .tutorial-panel {
+    max-width: none;
+  }
+}
