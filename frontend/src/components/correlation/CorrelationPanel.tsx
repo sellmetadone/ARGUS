@@ -93,7 +93,6 @@ export default function CorrelationPanel() {
     window.setTimeout(() => setFlash(''), 2500);
   };
 
-  /** Batch create without relying on stale relationship snapshot mid-loop. */
   const createAllPairs = (finding: CorrelationFinding) => {
     const pairs = linkablePairs(finding);
     let existing = relationships;
@@ -121,92 +120,55 @@ export default function CorrelationPanel() {
   };
 
   return (
-    <div
-      className="argus-panel"
-      style={{
-        width: 360,
-        background: 'var(--panel)',
-        borderLeft: '1px solid var(--border)',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        color: 'var(--text)',
-      }}
-    >
-      <div
-        style={{
-          padding: '12px 14px',
-          borderBottom: '1px solid var(--border)',
-          fontWeight: 600,
-          fontSize: 13,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <span>
-          <GitCompare size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+    <div className="argus-side-panel md-sheet-enter correlation-panel">
+      <header className="argus-side-panel__header">
+        <span className="argus-side-panel__title md-label-medium">
+          <GitCompare size={16} style={{ marginRight: 8, verticalAlign: -3 }} />
           {t('correlate')}
         </span>
-        <button type="button" className="btn btn-ghost" style={{ padding: 4 }} onClick={() => setPanel('correlation', false)}>
-          <X size={14} />
+        <button type="button" className="btn btn-ghost btn-icon" onClick={() => setPanel('correlation', false)} aria-label="Close">
+          <X size={18} />
         </button>
-      </div>
-      <div style={{ padding: '8px 12px', fontSize: 11, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
-        {t('corr_disclaimer')}
-        {flash && <div style={{ marginTop: 6, color: 'var(--accent)', fontWeight: 500 }}>{flash}</div>}
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-        {findings.length === 0 && (
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t('corr_empty')}</div>
-        )}
+      </header>
+      <div className="argus-side-panel__body md-stagger">
+        <p className="md-muted md-stagger-item">{t('corr_disclaimer')}</p>
+        {flash && <p className="md-banner md-banner--ok md-stagger-item">{flash}</p>}
+        {findings.length === 0 && <p className="md-muted">{t('corr_empty')}</p>}
         {findings.map((f) => {
           const pairs = linkablePairs(f);
           return (
-            <div
-              key={f.id}
-              style={{
-                border: '1px solid var(--border)',
-                borderRadius: 8,
-                padding: 10,
-                marginBottom: 10,
-                fontSize: 12,
-              }}
-            >
+            <article key={f.id} className="md-result-card md-stagger-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ fontWeight: 600 }}>{f.title}</span>
+                <span className="md-result-card__title">{f.title}</span>
                 <span style={{ color: severityColor(f.severity), fontSize: 11 }}>{f.severity}</span>
               </div>
-              <div style={{ color: 'var(--text-muted)', marginTop: 6 }}>{f.basis}</div>
-              <div style={{ color: 'var(--text-muted)', marginTop: 4, fontSize: 11 }}>
+              <div className="md-result-card__snippet">{f.basis}</div>
+              <div className="md-result-card__meta">
                 {t('rel_confidence')} {f.confidence}% · {f.limitations}
               </div>
               {f.dataUsed.length > 0 && (
-                <ul style={{ margin: '6px 0 0', paddingLeft: 16, color: 'var(--text-muted)', fontSize: 11 }}>
+                <ul style={{ margin: '6px 0 0', paddingLeft: 16, fontSize: 11 }} className="md-muted">
                   {f.dataUsed.slice(0, 6).map((d) => (
                     <li key={d}>{d}</li>
                   ))}
                 </ul>
               )}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+              <div className="md-chip-row" style={{ marginTop: 8 }}>
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="btn btn-outlined"
                   onClick={() => {
                     if (f.entityIds[0]) setSelectedEntity(f.entityIds[0]);
                     setHighlightedPath(f.entityIds);
                   }}
-                  style={{ fontSize: 11 }}
                 >
                   <Eye size={12} /> {t('corr_highlight')}
                 </button>
                 {pairs.length > 0 && (
                   <button
                     type="button"
-                    className="btn btn-primary"
+                    className="btn btn-filled"
                     onClick={() => createAllPairs(f)}
-                    style={{ fontSize: 11 }}
                     title={t('corr_link_hint')}
                   >
                     <Link2 size={12} /> {t('corr_create_links')} ({suggestedTypeForFinding(f)})
@@ -224,7 +186,7 @@ export default function CorrelationPanel() {
                         className="btn btn-ghost"
                         disabled={exists}
                         onClick={() => createSuspectedLink(f, a, b)}
-                        style={{ fontSize: 11, justifyContent: 'flex-start', opacity: exists ? 0.5 : 1 }}
+                        style={{ justifyContent: 'flex-start', opacity: exists ? 0.5 : 1 }}
                       >
                         <Link2 size={11} />
                         {labelOf(a)} ↔ {labelOf(b)}
@@ -234,7 +196,7 @@ export default function CorrelationPanel() {
                   })}
                 </div>
               )}
-            </div>
+            </article>
           );
         })}
       </div>
@@ -245,5 +207,5 @@ export default function CorrelationPanel() {
 function severityColor(s: string) {
   if (s === 'critical') return '#f87171';
   if (s === 'warning') return '#fbbf24';
-  return 'var(--text-muted)';
+  return 'var(--md-sys-color-on-surface-variant, var(--text-muted))';
 }
