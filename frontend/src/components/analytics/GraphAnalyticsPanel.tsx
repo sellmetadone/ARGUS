@@ -1,12 +1,22 @@
 import { useMemo, useState } from 'react';
 import { Network, Route, GitBranch, CircleDot, X } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { computeMetrics, computeDegrees, findIsolates, connectedComponents, shortestPath, findAllPaths, commonNeighbors, computeCentrality } from '../../services/intelligence/graphIntelligence';
+import {
+  computeMetrics,
+  computeDegrees,
+  findIsolates,
+  connectedComponents,
+  shortestPath,
+  findAllPaths,
+  commonNeighbors,
+  computeCentrality,
+} from '../../services/intelligence/graphIntelligence';
 import { useT } from '../../i18n/useT';
 
 export default function GraphAnalyticsPanel() {
   const t = useT();
-  const { activeCaseId, getEntitiesForCase, getRelationshipsForCase, setHighlightedPath, setSelectedEntity, setPanel } = useStore();
+  const { activeCaseId, getEntitiesForCase, getRelationshipsForCase, setHighlightedPath, setSelectedEntity, setPanel } =
+    useStore();
   const entities = activeCaseId ? getEntitiesForCase(activeCaseId) : [];
   const relationships = activeCaseId ? getRelationshipsForCase(activeCaseId) : [];
   const snap = useMemo(() => ({ entities, relationships }), [entities, relationships]);
@@ -22,7 +32,11 @@ export default function GraphAnalyticsPanel() {
   const runPath = () => {
     if (!fromId || !toId) return;
     const sp = shortestPath(snap, fromId, toId);
-    if (!sp) { setPathInfo(t('analytics_no_path')); setHighlightedPath([]); return; }
+    if (!sp) {
+      setPathInfo(t('analytics_no_path'));
+      setHighlightedPath([]);
+      return;
+    }
     setHighlightedPath(sp.path);
     let info = `${t('analytics_path_len')} ${sp.length}: ${sp.path.join(' → ')}`;
     const all = findAllPaths(snap, fromId, toId, 6, 10);
@@ -33,22 +47,41 @@ export default function GraphAnalyticsPanel() {
   };
 
   return (
-    <div className="argus-panel" style={{ width: 340, background: 'var(--panel)', borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', color: 'var(--text)' }}>
-      <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span><Network size={14} style={{ marginRight: 6, verticalAlign: -2 }} />{t('analytics')}</span>
-        <button type="button" className="btn btn-ghost" style={{ padding: 4 }} onClick={() => setPanel('analytics', false)}><X size={14} /></button>
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: 12, fontSize: 12, color: 'var(--text-muted)' }}>
-        {!activeCaseId && <div>{t('analytics_select_case')}</div>}
-        {activeCaseId && entities.length === 0 && <div>{t('analytics_empty')}</div>}
+    <div className="argus-side-panel md-sheet-enter analytics-panel">
+      <header className="argus-side-panel__header">
+        <span className="argus-side-panel__title md-label-medium">
+          <Network size={16} style={{ marginRight: 8, verticalAlign: -3 }} />
+          {t('analytics')}
+        </span>
+        <button type="button" className="btn btn-ghost btn-icon" onClick={() => setPanel('analytics', false)} aria-label="Close">
+          <X size={18} />
+        </button>
+      </header>
+      <div className="argus-side-panel__body md-stagger">
+        {!activeCaseId && <p className="md-muted">{t('analytics_select_case')}</p>}
+        {activeCaseId && entities.length === 0 && <p className="md-muted">{t('analytics_empty')}</p>}
         <Sec title={t('analytics_metrics')}>
-          {Object.entries(metrics).map(([k, v]) => <Row key={k} k={k} v={String(v)} />)}
+          {Object.entries(metrics).map(([k, v]) => (
+            <Row key={k} k={k} v={String(v)} />
+          ))}
         </Sec>
         <Sec title={t('analytics_shortest')}>
-          <select value={fromId} onChange={(e) => setFromId(e.target.value)} style={sel}><option value="">{t('analytics_from')}</option>{entities.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}</select>
-          <select value={toId} onChange={(e) => setToId(e.target.value)} style={{ ...sel, marginTop: 6 }}><option value="">{t('analytics_to')}</option>{entities.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}</select>
-          <button type="button" className="btn btn-primary" onClick={runPath} style={{ marginTop: 8 }}><Route size={12} /> {t('analytics_find')}</button>
-          {pathInfo && <div style={{ marginTop: 8, color: 'var(--text)', lineHeight: 1.4 }}>{pathInfo}</div>}
+          <select className="md-select" value={fromId} onChange={(e) => setFromId(e.target.value)}>
+            <option value="">{t('analytics_from')}</option>
+            {entities.map((e) => (
+              <option key={e.id} value={e.id}>{e.label}</option>
+            ))}
+          </select>
+          <select className="md-select" value={toId} onChange={(e) => setToId(e.target.value)} style={{ marginTop: 6 }}>
+            <option value="">{t('analytics_to')}</option>
+            {entities.map((e) => (
+              <option key={e.id} value={e.id}>{e.label}</option>
+            ))}
+          </select>
+          <button type="button" className="btn btn-filled" onClick={runPath} style={{ marginTop: 8 }}>
+            <Route size={12} /> {t('analytics_find')}
+          </button>
+          {pathInfo && <p style={{ marginTop: 8, lineHeight: 1.4 }}>{pathInfo}</p>}
         </Sec>
         <Sec title={t('analytics_degree')}>
           {degrees.map((d) => (
@@ -73,7 +106,7 @@ export default function GraphAnalyticsPanel() {
           ))}
         </Sec>
         <Sec title={t('analytics_isolates')}>
-          {isolates.length === 0 && <div style={{ fontSize: 11 }}>{t('analytics_none')}</div>}
+          {isolates.length === 0 && <p className="md-muted">{t('analytics_none')}</p>}
           {isolates.map((e) => (
             <button key={e.id} type="button" className="btn btn-ghost" onClick={() => setSelectedEntity(e.id)} style={{ width: '100%', justifyContent: 'flex-start' }}>
               <CircleDot size={12} /> {e.label}
@@ -86,9 +119,18 @@ export default function GraphAnalyticsPanel() {
 }
 
 function Sec({ title, children }: { title: string; children: React.ReactNode }) {
-  return <div style={{ marginBottom: 16 }}><div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, letterSpacing: 0.5 }}>{title.toUpperCase()}</div>{children}</div>;
+  return (
+    <section className="md-section md-stagger-item">
+      <h3 className="md-section__title">{title}</h3>
+      <div className="md-section__body">{children}</div>
+    </section>
+  );
 }
 function Row({ k, v }: { k: string; v: string }) {
-  return <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', color: 'var(--text)' }}><span>{k}</span><span className="mono">{v}</span></div>;
+  return (
+    <div className="oi-kv">
+      <span className="oi-kv__k">{k}</span>
+      <span className="oi-kv__v mono">{v}</span>
+    </div>
+  );
 }
-const sel: React.CSSProperties = { width: '100%', padding: '6px 8px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 12 };
